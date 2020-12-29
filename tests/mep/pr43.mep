@@ -1,0 +1,24 @@
+      MAIN
+      JUMP   L1
+L2:   ENFN   1         f
+      ALOC   1        result
+      LDVL   1,-9
+      CPFN   1,-7,1
+      ALOC   1        result
+      LDVL   1,-8
+      CPFN   1,-7,1
+      MULT
+      STVL   1,-10
+      JUMP   L3
+L3:   NOOP             
+      RTRN   5        end function
+L4:   ENFN   1         h
+      LDVL   1,-6
+      LDVL   1,-5
+      ADDD
+      STVL   1,-7
+      JUMP   L5
+L5:   NOOP             
+      RTRN   2        end function
+L1:   NOOP             body
+Semantic error.

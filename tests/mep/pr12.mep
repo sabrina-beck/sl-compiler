@@ -1,0 +1,33 @@
+      MAIN
+      ALOC   3
+      LDCT   10
+      STVL   0,0
+      LDCT   15
+      STVL   0,1
+      LDCT   1
+      STVL   0,2
+L1:   NOOP             while
+      LDVL   0,0
+      LDVL   0,1
+      LESS
+      JMPF   L2
+      LDVL   0,0
+      PRNT
+      LDVL   0,1
+      PRNT
+      LDVL   0,0
+      LDCT   1
+      ADDD
+      STVL   0,0
+      JUMP   L1
+L2:   NOOP             end while
+      LDVL   0,2
+      LNOT
+      STVL   0,2
+      LDVL   0,0
+      PRNT
+      LDVL   0,1
+      PRNT
+      DLOC   3
+      STOP
+      END 

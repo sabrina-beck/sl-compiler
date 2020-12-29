@@ -1,0 +1,30 @@
+      MAIN
+      ALOC   3
+      LDCT   10
+      STVL   0,0
+      LDCT   20
+      STVL   0,1
+      LDVL   0,0
+      LDVL   0,1
+      LESS
+      STVL   0,2
+      LDVL   0,2
+      JMPF   L1        if
+      LDVL   0,0
+      PRNT
+      LDVL   0,1
+      PRNT
+      JUMP   L2
+L1:   NOOP             else
+      LDVL   0,1
+      PRNT
+      LDVL   0,0
+      PRNT
+L2:   NOOP             end if
+      LDVL   0,0
+      LDVL   0,1
+      ADDD
+      PRNT
+      DLOC   3
+      STOP
+      END 

@@ -1,0 +1,63 @@
+      MAIN
+      ALOC   26
+      LDCT   0
+      STVL   0,0
+L1:   NOOP             while
+      LDVL   0,0
+      LDCT   3
+      LESS
+      JMPF   L2
+      LDCT   0
+      STVL   0,1
+L3:   NOOP             while
+      LDVL   0,1
+      LDCT   4
+      LESS
+      JMPF   L4
+      LADR   0,2
+      LDVL   0,0
+      INDX   4
+      LDVL   0,1
+      INDX   1
+      LDVL   0,0
+      LDVL   0,1
+      MULT
+      STMV   1
+      LDVL   0,0
+      PRNT
+      LDVL   0,1
+      PRNT
+      LADR   0,2
+      LDVL   0,0
+      INDX   4
+      LDVL   0,1
+      INDX   1
+      CONT
+      PRNT
+      LDVL   0,1
+      LDCT   1
+      ADDD
+      STVL   0,1
+      JUMP   L3
+L4:   NOOP             end while
+      LADR   0,14
+      LDVL   0,0
+      INDX   4
+      LADR   0,2
+      LDVL   0,0
+      INDX   4
+      LDMV   4
+      STMV   4
+      LDVL   0,0
+      LDCT   1
+      ADDD
+      STVL   0,0
+      JUMP   L1
+L2:   NOOP             end while
+      LADR   0,14
+      LADR   0,2
+      LDMV   12
+      STMV   12
+      DLOC   26
+      STOP
+      END 

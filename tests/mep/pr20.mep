@@ -1,0 +1,57 @@
+      MAIN
+      ALOC   2
+      JUMP   L1
+L2:   ENFN   1         f
+      JUMP   L4
+L5:   ENFN   2         g
+      LDCT   2
+      LDVL   2,-5
+      MULT
+      STVL   2,-6
+      JUMP   L6
+L6:   NOOP             
+      RTRN   1        end function
+L4:   NOOP             body
+      ALOC   1        result
+      LDVL   1,-6
+      LDVL   1,-5
+      MULT
+      CFUN   L5,1
+      STVL   1,-7
+      JUMP   L3
+L3:   NOOP             
+      RTRN   2        end function
+L7:   ENFN   1         g
+      LDCT   2
+      LDVL   1,-5
+      MULT
+      STVL   1,-6
+      JUMP   L8
+L8:   NOOP             
+      RTRN   1        end function
+L1:   NOOP             body
+      ALOC   1        result
+      LDCT   200
+      LDCT   300
+      CFUN   L2,0
+      STVL   0,0
+      ALOC   1        result
+      LDCT   400
+      CFUN   L7,0
+      STVL   0,1
+      LDVL   0,0
+      PRNT
+      LDVL   0,1
+      PRNT
+      ALOC   1        result
+      ALOC   1        result
+      LDCT   10
+      CFUN   L7,0
+      ALOC   1        result
+      LDCT   20
+      CFUN   L7,0
+      CFUN   L2,0
+      PRNT
+      DLOC   2
+      STOP
+      END 

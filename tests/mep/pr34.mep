@@ -1,0 +1,9 @@
+      MAIN
+      ALOC   100
+      LADR   0,0
+      LADR   0,50
+      LDMV   50
+      STMV   50
+      DLOC   100
+      STOP
+      END 

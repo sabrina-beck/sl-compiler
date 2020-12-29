@@ -1,0 +1,6 @@
+      MAIN
+      ALOC   110
+      LADR   0,0
+      LADR   0,100
+      LDMV   10
+Semantic error.

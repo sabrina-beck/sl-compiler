@@ -1,0 +1,33 @@
+      MAIN
+      ALOC   2
+      JUMP   L3
+L4:   ENFN   1         f
+      LDVL   1,-6
+      LDVL   1,-5
+      LEQU
+      JMPF   L6        if
+      JUMP   L1         goto lab1
+      JUMP   L7
+L6:   NOOP             else
+      JUMP   L2         goto lab2
+L7:   NOOP             end if
+L5:   NOOP             
+      RTRN   2        end function
+L3:   NOOP             body
+      LDCT   10
+      STVL   0,0
+      LDCT   20
+      STVL   0,1
+L1:   ENLB   0,2        lab1:
+      LDVL   0,0
+      PRNT
+L2:   ENLB   0,2        lab2:
+      LDVL   0,1
+      PRNT
+      LDVL   0,0
+      PRNT
+      LDVL   0,1
+      PRNT
+      DLOC   2
+      STOP
+      END 

@@ -1,0 +1,72 @@
+      MAIN
+      ALOC   2
+      JUMP   L1
+L2:   ENFN   1         f
+      LDVL   1,-5
+      LDVL   1,-7
+      LDVL   1,-6
+      GRTR
+      LAND
+      JMPF   L4        if
+      LDVL   1,-7
+      LDVL   1,-6
+      SUBT
+      STVL   1,-8
+      JUMP   L3
+      JUMP   L5
+L4:   NOOP             else
+      LDVL   1,-7
+      LDCT   2
+      LDVL   1,-6
+      MULT
+      LESS
+      JMPF   L6        if
+      LDVL   1,-7
+      LDVL   1,-6
+      ADDD
+      STVL   1,-8
+      JUMP   L3
+      JUMP   L7
+L6:   NOOP             else
+      LDCT   2
+      LDVL   1,-7
+      MULT
+      LDVL   1,-6
+      ADDD
+      STVL   1,-8
+      JUMP   L3
+L7:   NOOP             end if
+L5:   NOOP             end if
+L3:   NOOP             
+      RTRN   3        end function
+L8:   ENFN   1         g
+      LDCT   2
+      LDVL   1,-5
+      MULT
+      STVL   1,-6
+      JUMP   L9
+L9:   NOOP             
+      RTRN   1        end function
+L1:   NOOP             body
+      ALOC   1        result
+      LDCT   200
+      LDCT   300
+      LDCT   1
+      CFUN   L2,0
+      STVL   0,0
+      ALOC   1        result
+      LDCT   400
+      CFUN   L8,0
+      STVL   0,1
+      LDVL   0,0
+      PRNT
+      LDVL   0,1
+      PRNT
+      ALOC   1        result
+      ALOC   1        result
+      LDCT   10
+      CFUN   L8,0
+      ALOC   1        result
+      LDCT   20
+      CFUN   L8,0
+Semantic error.

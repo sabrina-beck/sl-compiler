@@ -1,0 +1,5 @@
+      MAIN
+      JUMP   L1         goto L100
+L1:   ENLB   0,0        L100:
+      STOP
+      END 

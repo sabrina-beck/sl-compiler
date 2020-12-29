@@ -1,0 +1,6 @@
+      MAIN
+      ALOC   2
+      LDVL   0,0
+      LDVL   0,1
+      ADDD
+Semantic error.

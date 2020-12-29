@@ -1,0 +1,132 @@
+      MAIN
+      ALOC   202
+      JUMP   L1
+L2:   ENFN   1         f
+      LADR   1,-109
+      LDMV   100
+      LDVL   1,-9
+      LDVL   1,-8
+      CPFN   1,-7,1
+L3:   NOOP             
+      RTRN   105        end function
+L4:   ENFN   1         h
+      ALOC   2
+      LDCT   0
+      STVL   1,0
+L6:   NOOP             while
+      LDVL   1,0
+      LDVL   1,-5
+      LESS
+      JMPF   L7
+      LDCT   0
+      STVL   1,1
+L8:   NOOP             while
+      LDVL   1,1
+      LDVL   1,-5
+      LESS
+      JMPF   L9
+      LDVL   1,-6
+      LDVL   1,0
+      INDX   10
+      LDVL   1,1
+      INDX   1
+      LADR   1,-106
+      LDVL   1,0
+      INDX   10
+      LDVL   1,1
+      INDX   1
+      CONT
+      STMV   1
+      LDVL   1,1
+      LDCT   1
+      ADDD
+      STVL   1,1
+      JUMP   L8
+L9:   NOOP             end while
+      LDVL   1,0
+      LDCT   1
+      ADDD
+      STVL   1,0
+      JUMP   L6
+L7:   NOOP             end while
+L5:   NOOP             
+      DLOC   2
+      RTRN   102        end function
+L1:   NOOP             body
+      LDCT   0
+      STVL   0,200
+L10:  NOOP             while
+      LDVL   0,200
+      LDCT   10
+      LESS
+      JMPF   L11
+      LDCT   0
+      STVL   0,201
+L12:  NOOP             while
+      LDVL   0,201
+      LDCT   10
+      LESS
+      JMPF   L13
+      LADR   0,0
+      LDVL   0,200
+      INDX   10
+      LDVL   0,201
+      INDX   1
+      LDVL   0,200
+      LDVL   0,201
+      MULT
+      STMV   1
+      LDVL   0,201
+      LDCT   1
+      ADDD
+      STVL   0,201
+      JUMP   L12
+L13:  NOOP             end while
+      LDVL   0,200
+      LDCT   1
+      ADDD
+      STVL   0,200
+      JUMP   L10
+L11:  NOOP             end while
+      LADR   0,0
+      LDMV   100
+      LADR   0,100
+      LDCT   10
+      LGAD   L4,0
+      CFUN   L2,0
+      LDCT   0
+      STVL   0,200
+L14:  NOOP             while
+      LDVL   0,200
+      LDCT   10
+      LESS
+      JMPF   L15
+      LDCT   0
+      STVL   0,201
+L16:  NOOP             while
+      LDVL   0,201
+      LDCT   10
+      LESS
+      JMPF   L17
+      LADR   0,100
+      LDVL   0,200
+      INDX   10
+      LDVL   0,201
+      INDX   1
+      CONT
+      PRNT
+      LDVL   0,201
+      LDCT   1
+      ADDD
+      STVL   0,201
+      JUMP   L16
+L17:  NOOP             end while
+      LDVL   0,200
+      LDCT   1
+      ADDD
+      STVL   0,200
+      JUMP   L14
+L15:  NOOP             end while
+      DLOC   202
+      STOP
+      END 

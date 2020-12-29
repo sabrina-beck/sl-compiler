@@ -1,0 +1,41 @@
+      MAIN
+      ALOC   2
+      LDCT   10
+      STVL   0,0
+      LDCT   15
+      STVL   0,1
+L1:   NOOP             while
+      LDVL   0,0
+      LDVL   0,1
+      LESS
+      LDCT   2
+      LDVL   0,0
+      MULT
+      LDVL   0,1
+      GRTR
+      LAND
+      JMPF   L2
+      LDVL   0,0
+      LDCT   0
+      GRTR
+      JMPF   L3        if
+      LDVL   0,0
+      PRNT
+L3:   NOOP             end if
+      LDVL   0,0
+      LDCT   2
+      ADDD
+      STVL   0,0
+      LDVL   0,1
+      LDCT   1
+      ADDD
+      STVL   0,1
+      JUMP   L1
+L2:   NOOP             end while
+      LDVL   0,0
+      PRNT
+      LDVL   0,1
+      PRNT
+      DLOC   2
+      STOP
+      END 

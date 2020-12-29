@@ -1,0 +1,15 @@
+      MAIN
+      ALOC   1
+      JUMP   L1
+L2:   ENFN   1         f
+L3:   NOOP             
+      RTRN   0        end function
+L1:   NOOP             body
+      LDCT   100
+      STVL   0,0
+      CFUN   L2,0
+      LDVL   0,0
+      PRNT
+      DLOC   1
+      STOP
+      END 

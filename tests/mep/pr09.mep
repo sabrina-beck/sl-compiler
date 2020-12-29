@@ -1,0 +1,17 @@
+      MAIN
+      ALOC   2
+      READ
+      STVL   0,0
+      READ
+      STVL   0,1
+      LDCT   2
+      STVL   0,0
+      LDCT   1
+      STVL   0,1
+      LDVL   0,0
+      PRNT
+      LDVL   0,1
+      PRNT
+      DLOC   2
+      STOP
+      END 
