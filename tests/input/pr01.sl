@@ -1,0 +1,4 @@
+// Minimal test
+
+void Example()
+{}
