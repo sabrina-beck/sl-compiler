@@ -1,5 +1,6 @@
 #include "codegen.h"
+#include "tree.h"
 
 void processProgram(void *p) {
-    // TODO
+    TreeNodePtr treeRoot = (TreeNodePtr) p;
 }
