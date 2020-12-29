@@ -9,15 +9,18 @@ testResultDir="${buildDir}tests/"
 
 mkdir -p $testResultDir
 
-for testFile in tests/input/*; do
+for testFile in tests/sl/*; do
 
   testNumber=$(echo $testFile | sed -e 's/[^0-9]//g')
   echo -n "Running test $testNumber"
 
   expectedResponsePath=$(find tests/output -regextype posix-egrep -regex ".*$testNumber.*")
+  resultProgram="${testResultDir}result$testNumber.mep"
   resultFile="${testResultDir}result$testNumber.res"
+  inputFile="tests/input/data$testNumber.in"
 
-  ./build/main < $testFile > $resultFile
+  ./build/main < $testFile > $resultProgram
+  mepa --limit 12000 --progfile $resultProgram < $inputFile > $resultFile
 
   DIFF=$(diff $resultFile $expectedResponsePath)
   if [ "$DIFF" != "" ]
