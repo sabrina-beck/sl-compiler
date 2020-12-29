@@ -1,6 +1,6 @@
 %option noyywrap
 
-    #include "test_tree.h"
+    #include "slc.h"
     #include "parser.h"
 
     int line_num = 1, lexerror = 0;
