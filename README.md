@@ -1,72 +1,85 @@
-# A Tree Builder for SL — Simple Language
-Implementation of a Syntax Tree (from syntax analysis phase) for the Simple Language compiler.
+# A Compiler for SL — Simple Language
+Implementation of the Simple Language compiler.
 
 This is a project developed for the subject MO403 - Implementation of Programming Languages taught by professor Tomasz Kowaltowski during the second semester of 2020.
 
 The subject website: https://sites.google.com/unicamp.br/ic-mo403-mc900/main
 
 ## Project Description
-The purpose of this task is the implementation of tree representation for SL programs, following suggestions presented in class. At least four files should be submitted:
+The purpose of this task is the implementation of a compiler for SL programs, following suggestions 
+presented in class. At least six files should be submitted:
 * `scanner.l`
 * `parser.y`
 * `tree.c`
 * `tree.h`
+* `codegen.c`
+* `codegen.h`
 
-The first file can be almost identical to the one from the previous tasks, with minor adaptations whenever necessary. The second file will be similar to the previous one, but will include semantic actions in order to build the tree. The other two files should implement the tree building functions.
+The first four files can be almost identical to the ones from the previous tasks, with minor adaptations 
+whenever necessary. The other files should implement MEPA code generating functions. Up to four additional
+`.c` and/or `.h` files may be submitted; they will be included in the compilation process (`*.c`).
 
-Your implementation will be tested by the program `test_tree.c` which is provided (with `test_tree.h`). Notice that `test_tree.c` will import the submitted file `tree.h`. The minimum requirement for this file is to include the definitions:
+Your implementation will be tested by the program `slc.c` which is provided (with `slc.h`). Notice that 
+`slc.c` will import the submitted file `codegen.h`; the minimum requirement for this file is to include 
+the definition:
 ```
-   void *getTree();  // returns any pointer
-   void counts(void *p, int *functions, int *funcalls, int *whiles, int *ifs, int *bin);
-```
-
-Both functions must be implemented in one of the submitted `.c` files. The first function should return a pointer to the final program tree. Notice that if the tree was build correctly, it will be the only pointer on the stack. It is not necessary for the testing program to know its type.
-
-The second function should return the number of occurrences of program constructs in your tree corresponding to:
-* function declarations (`functions`)
-* function calls (`funcalls`)
-* while statements (`whiles`)
-* if statements (`ifs`)
-* binary operations (`bin`)
-
-The parameter `p` is the pointer to the tree, and other parameters are references to variables which will contain the results. A simple way of implementing the function `counts(...)` is to declare an auxiliary function like:
-```
-int count(TreeNodePtr p, Categ cat);
+void processProgram(void *p);
 ```
 
-which recursively counts nodes of a given category. (The details depend on your implementation of the tree.)
-
-It is suggested that you also include in `tree.h` all declarations describing the nodes of your tree; they will be necessary in the next task (code generation from trees).
-
-You should also implement an auxiliary function to dump the contents of a node and recursively of its subtrees. Such a function can be very useful in debugging your code, but will not be called by the test program. The header of this function could be, for instance:
-```
- void dumpTree(TreeNodePtr p, int indent);
-```
-
-where `p` is a pointer to the node (root of a tree) and `indent` is the amount of indentation for this node — it should be increased in recursive calls for subtrees in order to improve readability.
+This function should be implemented in one of your `.c` files. It should generate a complete MEPA code from
+the program tree pointed to by the argument `p`; its type can be declared `void` because the test program 
+does not need to know the details of the tree structures. MEPA code should be written to the standard output
+file.
 
 The submission will be processed by the following sequence of Linux commands:
+
 ```
 bison -d -o parser.c parser.y
 flex -i -o scanner.c  scanner.l
-gcc -std=c99 -pedantic -o test_tree *.c
-for each test NN:
-    test_tree  <  progNN.sl  >  resultNN
+gcc -std=c99 -pedantic -o slc *.c
+    for each test NN:
+        slc  < progNN.sl > progNN.mep
+        mepa --limit 12000 --progfile progNN.mep < dataNN.in > progNN.res
 ```
 
-There are three sets of test files. Tests 00 to 27 cover the minimal part of SL to be implemented. Optional tests 31 to 37 cover type declarations and arrays. Finally, optional tests 41 to 43 cover functions as parameters. The correct option should be chosen for submission.
+(Mepa will be invoked only if the compiler `slc` did not detect any errors.)
+
+Your program should detect lexical, syntactical and semantic errors, using "panic" mode, i.e. a simple error
+message should be printed and execution aborted with exit code 0. File `slc.c` provides two error messaging
+functions to be used in an obvious way. Notice that these messages will be written into the same file which
+contains already a (partial) MEPA translation.
+
+There are three sets of test files. Tests 00 to 27 cover the minimal part of SL to be implemented. Optional
+tests 31 to 37 cover type declarations and arrays. Finally, optional tests 41 to 43 cover functions as 
+parameters. The correct option should be chosen for submission.
+
+(Tests 23 to 28 should produce error messages at the end of their .mep files.)
 
 ### Remarks
-* Up to four additional `.c` or `.h` files may be submitted; they will be included in the compilation process (`*.c`).
-* File `all.zip` (see auxiliary files) provides the test program mentioned above as well as the test files and the results.
+* File `all.zip` (see auxiliary files) provides the test program mentioned above as well as the test files
+  and their results.
+* Mepa files produced by the compiler do not have to be identical but their execution (when correct) should
+  produce identical results.
 * Maximum number of submissions is 20 — test your solutions exhaustively before submission!
-* This task is worth 15% of the final project grade.
-* Due to the number of tests and the processing required for each of them, the results of each submission may take up to 30 seconds or even more, depending on the current load of the SuSy system.
+* Due to the number of tests and the processing required for each of them, the results of each submission
+  may take up to 30 seconds or even more, depending on the current load of the SuSy system.
+* Final submission date: January 15, 2021.
+* This task contributes to the final project grade as follows:
+    * 30% for the implementation of the basic part of SL
+    * 45% for the implementation of the basic part of SL and functions as parameters
+    * 45% for the implementation of the basic part of SL and type declarations and arrays
+    * 60% for the complete implementation of SL.
+* A complete copy of the [Mepa interpreter](mepa.zip) is provided for download on course's page. See 
+  [Mepa description](mepa.pdf) for usage instructions.
 
 ### Obs
-* The `all.zip` file mentioned had the files contained in the directory `tests` and the files `src/test_tree.h` and `test_tree.c`.
-* This syntax tree is based on the scanner implemented previously. The scanner project can be found on [sl-scanner](https://github.com/sabrina-beck/sl-scanner)
-* This syntax tree is also based on the parser implemented previously. The parser project can be found on [sl-parser](https://github.com/sabrina-beck/sl-parser)
+* The `all.zip` file mentioned had the files contained in the directory `tests` and the files 
+  `src/test_tree.h` and `test_tree.c`.
+* This compiler is based on the scanner, parser and syntax tree implemented previously. Their projects
+  can be found as follows:
+    * [sl-scanner](https://github.com/sabrina-beck/sl-scanner)
+    * [sl-parser](https://github.com/sabrina-beck/sl-parser)
+    * [sl-tree](https://github.com/sabrina-beck/sl-tree)
 
 ## Project Execution
 
