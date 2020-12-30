@@ -60,7 +60,7 @@ void processUnlabeledStatement(TreeNodePtr node) {
             processRepetitive(node);
         break;
         case COMPOUND_NODE:
-            // TODO processCompound(node);
+            processCompound(node);
         break;
         default:
             fprintf(stderr, "Expected unlabeled statement node!\n");
