@@ -3,11 +3,16 @@
 #include <stdio.h>
 #include "utils.h"
 
+void processUnlabeledStatement(TreeNodePtr node);
 void processAssignment(TreeNodePtr node);
 
 // ...
 void processConditional(TreeNodePtr node);
 void processRepetitive(TreeNodePtr node);
+
+void processCompound(TreeNodePtr node);
+void processUnlabeledStatementList(TreeNodePtr node);
+
 // ...
 
 void processExpression(TreeNodePtr node);
@@ -28,6 +33,38 @@ void processMultiplicativeOperator(TreeNodePtr node);
 void processProgram(void *p) {
     TreeNodePtr treeRoot = (TreeNodePtr) p;
     processExpression(treeRoot);
+}
+
+void processUnlabeledStatement(TreeNodePtr node) {
+    if(node == NULL) { // treats empty statement
+        return;
+    }
+
+    switch (node->category) {
+        case ASSIGNMENT_NODE:
+            processAssignment(node);
+        break;
+        case FUNCTION_CALL_NODE:
+            // TODO processFunctionCall(node);
+        break;
+        case GOTO_NODE:
+            // TODO processGoto(node);
+        break;
+        case RETURN_NODE:
+            // TODO processReturn(node);
+        break;
+        case IF_NODE:
+            processConditional(node);
+        break;
+        case WHILE_NODE:
+            processRepetitive(node);
+        break;
+        case COMPOUND_NODE:
+            // TODO processCompound(node);
+        break;
+        default:
+            fprintf(stderr, "Expected unlabeled statement node!\n");
+    }
 }
 
 void processAssignment(TreeNodePtr node) {
@@ -62,13 +99,13 @@ void processConditional(TreeNodePtr node) {
     processExpression(conditionNode);
     printf("JUMPF %s\n", elseLabel);
 
-    // TODO processCompound(ifCompound);
+    processCompound(ifCompound);
 
     if(elseCompound != NULL) {
         printf("JUMP %s\n", elseExitLabel);
 
         printf("%s: NOOP\n", elseLabel);
-        // TODO processCompound(elseCompound);
+        processCompound(elseCompound);
 
         printf("%s: NOOP\n", elseExitLabel);
     } else {
@@ -92,13 +129,30 @@ void processRepetitive(TreeNodePtr node) {
     processExpression(conditionNode);
     printf("JUMPF %s", exitLabel);
 
-    // TODO processCompound(compoundNode);
+    processCompound(compoundNode);
     printf("JUMP %s", conditionLabel);
 
     printf("%s: NOOP\n", exitLabel);
 
 }
 
+void processCompound(TreeNodePtr node) {
+    if(node->category != COMPOUND_NODE) {
+        fprintf(stderr, "Expected compound node!\n");
+        return;
+    }
+
+    TreeNodePtr unlabeledStatementNodeList = node->subtrees[0];
+    processUnlabeledStatementList(unlabeledStatementNodeList);
+}
+
+void processUnlabeledStatementList(TreeNodePtr node) {
+    TreeNodePtr current = node;
+    while (current != NULL) {
+        processUnlabeledStatement(current);
+        current = current->next;
+    }
+}
 // ...
 
 void processExpression(TreeNodePtr node) {
