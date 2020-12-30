@@ -244,23 +244,23 @@ integer                     : INTEGER { addTreeNodeWithName(INTEGER_NODE, 0, tok
                             ;
 
 
-relational_operator         : LESS_OR_EQUAL { addTreeNodeWithName(RELATIONAL_OPERATOR_NODE, 0, tokenValue); }
-                            | LESS { addTreeNodeWithName(RELATIONAL_OPERATOR_NODE, 0, tokenValue); }
-                            | EQUAL { addTreeNodeWithName(RELATIONAL_OPERATOR_NODE, 0, tokenValue); }
-                            | DIFFERENT { addTreeNodeWithName(RELATIONAL_OPERATOR_NODE, 0, tokenValue); }
-                            | GREATER_OR_EQUAL { addTreeNodeWithName(RELATIONAL_OPERATOR_NODE, 0, tokenValue); }
-                            | GREATER { addTreeNodeWithName(RELATIONAL_OPERATOR_NODE, 0, tokenValue); }
+relational_operator         : LESS_OR_EQUAL { addTreeNode(LESS_OR_EQUAL_NODE, 0), addTreeNode(RELATIONAL_OPERATOR_NODE, 1); }
+                            | LESS { addTreeNode(LESS_NODE, 0), addTreeNode(RELATIONAL_OPERATOR_NODE, 1); }
+                            | EQUAL { addTreeNode(EQUAL_NODE, 0), addTreeNode(RELATIONAL_OPERATOR_NODE, 1); }
+                            | DIFFERENT { addTreeNode(DIFFERENT_NODE, 0), addTreeNode(RELATIONAL_OPERATOR_NODE, 1); }
+                            | GREATER_OR_EQUAL { addTreeNode(GREATER_OR_EQUAL_NODE, 0), addTreeNode(RELATIONAL_OPERATOR_NODE, 1); }
+                            | GREATER { addTreeNode(GREATER_NODE, 0), addTreeNode(RELATIONAL_OPERATOR_NODE, 1); }
                             ;
-additive_operator           : PLUS { addTreeNodeWithName(ADDITIVE_OPERATOR_NODE, 0, tokenValue); }
-                            | MINUS { addTreeNodeWithName(ADDITIVE_OPERATOR_NODE, 0, tokenValue); }
-                            | OR { addTreeNodeWithName(ADDITIVE_OPERATOR_NODE, 0, tokenValue); }
+additive_operator           : PLUS { addTreeNode(PLUS_NODE, 0), addTreeNode(ADDITIVE_OPERATOR_NODE, 1); }
+                            | MINUS { addTreeNode(MINUS_NODE, 0), addTreeNode(ADDITIVE_OPERATOR_NODE, 1); }
+                            | OR { addTreeNode(OR_NODE, 0), addTreeNode(ADDITIVE_OPERATOR_NODE, 1); }
                             ;
-unary_operator              : PLUS { addTreeNodeWithName(UNARY_OPERATOR_NODE, 0, tokenValue); }
-                            | MINUS { addTreeNodeWithName(UNARY_OPERATOR_NODE, 0, tokenValue); }
-                            | NOT { addTreeNodeWithName(UNARY_OPERATOR_NODE, 0, tokenValue); }
+unary_operator              : PLUS { addTreeNode(PLUS_NODE, 0), addTreeNode(UNARY_OPERATOR_NODE, 1); }
+                            | MINUS { addTreeNode(MINUS_NODE, 0), addTreeNode(UNARY_OPERATOR_NODE, 1); }
+                            | NOT { addTreeNode(NOT_NODE, 0), addTreeNode(UNARY_OPERATOR_NODE, 1); }
                             ;
-multiplicative_operator     : MULTIPLY { addTreeNodeWithName(MULTIPLICATIVE_OPERATOR_NODE, 0, tokenValue); }
-                            | DIV { addTreeNodeWithName(MULTIPLICATIVE_OPERATOR_NODE, 0, tokenValue); }
-                            | AND { addTreeNodeWithName(MULTIPLICATIVE_OPERATOR_NODE, 0, tokenValue); }
+multiplicative_operator     : MULTIPLY { addTreeNode(MULTIPLY_NODE, 0), addTreeNode(MULTIPLICATIVE_OPERATOR_NODE, 1); }
+                            | DIV { addTreeNode(DIV_NODE, 0), addTreeNode(MULTIPLICATIVE_OPERATOR_NODE, 1); }
+                            | AND { addTreeNode(AND_NODE, 0), addTreeNode(MULTIPLICATIVE_OPERATOR_NODE, 1); }
                             ;
 %%
