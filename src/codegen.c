@@ -1,6 +1,11 @@
 #include "codegen.h"
 #include "tree.h"
 #include <stdio.h>
+#include "utils.h"
+
+void processAssignment(TreeNodePtr node);
+
+// ...
 
 void processExpression(TreeNodePtr node);
 void routeExpressionSubtree(TreeNodePtr node);
@@ -21,6 +26,22 @@ void processProgram(void *p) {
     TreeNodePtr treeRoot = (TreeNodePtr) p;
     processExpression(treeRoot);
 }
+
+void processAssignment(TreeNodePtr node) {
+    if(node->category != ASSIGNMENT_NODE) {
+        fprintf(stderr, "Expected assignment node!\n");
+        return;
+    }
+
+    TreeNodePtr variableNode = node->subtrees[0];
+    TreeNodePtr expressionNode = node->subtrees[1];
+
+    processExpression(expressionNode);
+    // TODO processVariable
+    // TODO STVl
+}
+
+// ...
 
 void processExpression(TreeNodePtr node) {
     if(node->category != EXPRESSION_NODE) {
@@ -139,6 +160,7 @@ void processFactor(TreeNodePtr node) {
     switch (specificFactor->category) {
         case VARIABLE_NODE:
             //TODO processVariable();
+            //TODO LDVL
         break;
         case INTEGER_NODE:
             processInteger(specificFactor);
