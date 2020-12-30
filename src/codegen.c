@@ -6,6 +6,9 @@
 void processAssignment(TreeNodePtr node);
 
 // ...
+void processConditional(TreeNodePtr node);
+void processRepetitive(TreeNodePtr node);
+// ...
 
 void processExpression(TreeNodePtr node);
 void routeExpressionSubtree(TreeNodePtr node);
@@ -39,6 +42,61 @@ void processAssignment(TreeNodePtr node) {
     processExpression(expressionNode);
     // TODO processVariable
     // TODO STVl
+}
+
+// ...
+
+void processConditional(TreeNodePtr node) {
+    if(node->category != IF_NODE) {
+        fprintf(stderr, "Expected if node!\n");
+        return;
+    }
+
+    TreeNodePtr conditionNode = node->subtrees[0];
+    TreeNodePtr ifCompound = node->subtrees[1];
+    TreeNodePtr elseCompound = node->subtrees[2];
+
+    char* elseLabel = nextMEPALabel();
+    char* elseExitLabel = nextMEPALabel();
+
+    processExpression(conditionNode);
+    printf("JUMPF %s\n", elseLabel);
+
+    // TODO processCompound(ifCompound);
+
+    if(elseCompound != NULL) {
+        printf("JUMP %s\n", elseExitLabel);
+
+        printf("%s: NOOP\n", elseLabel);
+        // TODO processCompound(elseCompound);
+
+        printf("%s: NOOP\n", elseExitLabel);
+    } else {
+        printf("%s: NOOP\n", elseLabel);
+    }
+}
+
+void processRepetitive(TreeNodePtr node) {
+    if(node->category != WHILE_NODE) {
+        fprintf(stderr, "Expected while node!\n");
+        return;
+    }
+
+    TreeNodePtr conditionNode = node->subtrees[0];
+    TreeNodePtr compoundNode = node->subtrees[1];
+
+    char* conditionLabel = nextMEPALabel(); // L1
+    char* exitLabel = nextMEPALabel(); // L2
+
+    printf("%s: NOOP\n", conditionLabel);
+    processExpression(conditionNode);
+    printf("JUMPF %s", exitLabel);
+
+    // TODO processCompound(compoundNode);
+    printf("JUMP %s", conditionLabel);
+
+    printf("%s: NOOP\n", exitLabel);
+
 }
 
 // ...
