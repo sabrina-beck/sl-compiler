@@ -52,6 +52,8 @@ void processProgram(void *p) {
 
     processFunction(treeRoot, true);
 
+    addCommand("END ");
+
     printProgram();
 }
 
@@ -432,7 +434,7 @@ void printProgram() {
 
     while (programQueue->size > 0) {
         char* command = (char*) dequeue(programQueue);
-        printf("%s\n", command);
+        printf("      %s\n", command);
         free(command);
     }
 }
