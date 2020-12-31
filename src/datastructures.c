@@ -1,10 +1,10 @@
-#include "stack.h"
+#include "datastructures.h"
 
 #include <stdlib.h>
 
 /* Auxiliary functions for memory allocation and deallocation of the stack nodes */
-StackNode* newStackNode(void* data, StackNode* next);
-void freeStackNode(StackNode* node);
+LinkedNode* newLinkedNode(void* data, LinkedNode* next);
+void freeLinkedNode(LinkedNode* node);
 
 /**
  * Public definitions implementation
@@ -17,18 +17,18 @@ Stack* newStack() {
 }
 
 void push(Stack* stack, void* data) {
-    StackNode* newNode = newStackNode(data, stack->top);
+    LinkedNode* newNode = newLinkedNode(data, stack->top);
     stack->top = newNode;
     stack->size++;
 }
 
 void* pop(Stack* stack){
-    StackNode* poppedNode = stack->top;
+    LinkedNode* poppedNode = stack->top;
     stack->top = poppedNode->next;
     stack->size--;
 
     void* data = poppedNode->data;
-    freeStackNode(poppedNode);
+    freeLinkedNode(poppedNode);
 
     return data;
 }
@@ -36,13 +36,13 @@ void* pop(Stack* stack){
 /**
  * Private definitions implementation
  **/
-StackNode* newStackNode(void* data, StackNode* next) {
-    StackNode* newNode = malloc(sizeof(StackNode));
+LinkedNode* newLinkedNode(void* data, LinkedNode* next) {
+    LinkedNode* newNode = malloc(sizeof(LinkedNode));
     newNode->data = data;
     newNode->next = next;
     return newNode;
 }
 
-void freeStackNode(StackNode* node) {
+void freeLinkedNode(LinkedNode* node) {
     free(node);
 }

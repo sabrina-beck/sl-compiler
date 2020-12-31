@@ -1,4 +1,4 @@
-#include "stack.h"
+#include "datastructures.h"
 
 #define MAX_CHILD_NODES 5
 
