@@ -7,6 +7,38 @@ LinkedNode* newLinkedNode(void* data, LinkedNode* next);
 void freeLinkedNode(LinkedNode* node);
 
 /**
+ * Public definitions implementation for List
+ **/
+List* newList() {
+    List* list = malloc(sizeof(List));
+    list->size=0;
+    list->front = NULL;
+    return list;
+}
+
+void add(List* list, void* data) {
+    LinkedNode* newNode = newLinkedNode(data, list->front);
+    list->front = newNode;
+    list->size++;
+}
+
+List* concat(List* list1, List* list2) {
+    if(list1 == NULL) {
+        List* list = newList();
+        list->front = list2->front;
+        list->size = list2->size;
+        return list;
+    }
+
+    LinkedNode* current = list1->front;
+    while (current->next != NULL) {
+        current = current->next;
+    }
+    current->next = list2->front;
+    list1->size = list1->size + list2->size;
+}
+
+/**
  * Public definitions implementation for Stack
  **/
 Stack* newStack() {
@@ -23,6 +55,10 @@ void push(Stack* stack, void* data) {
 }
 
 void* pop(Stack* stack){
+    if(stack->top == NULL) {
+        return NULL;
+    }
+
     LinkedNode* poppedNode = stack->top;
     stack->top = poppedNode->next;
     stack->size--;
@@ -33,11 +69,11 @@ void* pop(Stack* stack){
     return data;
 }
 
-void* find(Stack* stack, bool (*predicate)(void*)) {
+void* find(Stack* stack, void* secondParam, bool (*predicate)(void*, void*)) {
     LinkedNode* current = stack->top;
     while (current != NULL) {
         void* data = current->data;
-        if(predicate(data)) {
+        if(predicate(data, secondParam)) {
             return data;
         }
     }

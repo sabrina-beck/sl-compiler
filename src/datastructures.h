@@ -12,6 +12,14 @@ typedef struct _linkedNode {
     struct _linkedNode* next;
 } LinkedNode;
 
+typedef struct _list {
+    LinkedNode* front;
+    int size;
+} List;
+List* newList();
+void add(List* list, void* data);
+List* concat(List* list1, List* list2);
+
 typedef struct _stack {
     LinkedNode* top;
     int size ;
@@ -20,7 +28,7 @@ typedef struct _stack {
 Stack* newStack();
 void push(Stack* stack, void* data);
 void* pop(Stack* stack);
-void* find(Stack* stack, bool (*predicate)(void*));
+void* find(Stack* stack, void* secondParam, bool (*predicate)(void*, void*));
 
 typedef struct _queue {
     LinkedNode* front;

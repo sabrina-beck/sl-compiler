@@ -1,6 +1,7 @@
 #include "utils.h"
 
 #include <stdio.h>
+#include <string.h>
 
 /** Symbol table auxiliary functions **/
 TypeDescriptorPtr newPredefinedTypeDescriptor(int size, PredefinedType predefinedType);
@@ -49,6 +50,80 @@ SymbolTablePtr initializeSymbolTable() {
     push(symbolTable->stack, writeFunction);
 
     return symbolTable;
+}
+
+bool byIdentifierPredicate(void* data, void* secondParam) {
+    SymbolTableEntryPtr entry = (SymbolTableEntryPtr) data;
+    char* identifier = (char*) secondParam;
+    return strcmp(identifier, entry->identifier);
+}
+
+SymbolTableEntryPtr findIdentifier(SymbolTablePtr symbolTable, char* identifier) {
+    return (SymbolTableEntryPtr) find(symbolTable->stack, identifier, byIdentifierPredicate);
+}
+
+SymbolTableEntryPtr newParameter(int level, char* identifier, int displacement, TypeDescriptorPtr type, ParameterPassage parameterPassage) {
+    ParameterDescriptorPtr parameterDescriptor = malloc(sizeof(ParameterDescriptorPtr));
+    parameterDescriptor->displacement = displacement;
+    parameterDescriptor->type = type;
+    parameterDescriptor->parameterPassage = parameterPassage;
+
+    SymbolTableEntryPtr symbol = malloc(sizeof(SymbolTableEntry));
+    symbol->category = PARAMETER_SYMBOL;
+    symbol->level = level;
+    symbol->identifier = identifier;
+    symbol->description.parameterDescriptor = parameterDescriptor;
+
+    return symbol;
+}
+
+SymbolTableEntryPtr newFunctionParameter(SymbolTableEntryPtr functionEntry, int displacement) {
+    if (functionEntry->category != FUNCTION_SYMBOL) {
+        fprintf(stderr, "Expected function entry!");
+        exit(0);
+    }
+
+    FunctionDescriptorPtr functionDescriptor = functionEntry->description.functionDescriptor;
+
+    FunctionTypeDescriptorPtr functionTypeDescriptor = malloc(sizeof(FunctionTypeDescriptor));
+    functionTypeDescriptor->params = functionDescriptor->params;
+    functionTypeDescriptor->returnType = functionDescriptor->returnType;
+
+    TypeDescriptorPtr type = malloc(sizeof(TypeDescriptorPtr));
+    type->category = FUNCTION_TYPE;
+    type->size = 3; // generalized address
+    type->description.functionTypeDescriptor = functionTypeDescriptor;
+
+    return newParameter(functionEntry->level, functionEntry->identifier, displacement, type, FUNCTION_PARAMETER);
+}
+
+SymbolTableEntryPtr newFunctionDescriptor(int level, char* identifier, TypeDescriptorPtr returnType, List* paramEntries) {
+    FunctionDescriptorPtr functionDescriptor = malloc(sizeof(FunctionDescriptor));
+    functionDescriptor->returnDisplacement = -paramEntries->size - 5; // FIXME explain
+    functionDescriptor->returnType = returnType;
+    functionDescriptor->params = paramEntries;
+
+    SymbolTableEntryPtr symbol = malloc(sizeof(SymbolTableEntry));
+    symbol->category = CONSTANT_SYMBOL;
+    symbol->level = level;
+    symbol->identifier = identifier;
+    symbol->description.functionDescriptor = functionDescriptor;
+
+    return symbol;
+}
+
+void addSymbolTableEntry(SymbolTablePtr symbolTable, SymbolTableEntryPtr entry) {
+    push(symbolTable->stack, entry);
+
+    if(entry->category == FUNCTION_SYMBOL) {
+        LinkedNode* current = entry->description.functionDescriptor->params->front;
+
+        while (current != NULL) {
+            SymbolTableEntryPtr paramEntry = (SymbolTableEntryPtr) current->data;
+            addSymbolTableEntry(symbolTable, paramEntry);
+            current = current->next;
+        }
+    }
 }
 
 bool equivalentTypes(TypeDescriptorPtr type1, TypeDescriptorPtr type2) {

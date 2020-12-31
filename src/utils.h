@@ -4,7 +4,8 @@
 
 typedef enum {
     VALUE_PARAMETER,
-    VARIABLE_PARAMETER
+    VARIABLE_PARAMETER,
+    FUNCTION_PARAMETER
 } ParameterPassage;
 
 struct _TypeDescriptor;
@@ -32,8 +33,8 @@ typedef struct {
 } ArrayDescriptor, *ArrayDescriptorPtr;
 
 typedef struct {
-    struct _TypeDescriptor* result;
-    struct _ParameterDescriptor* params;
+    struct _TypeDescriptor* returnType;
+    List* params; // List of SymbolTableEntry of category PARAMETER_SYMBOL
 } FunctionTypeDescriptor, *FunctionTypeDescriptorPtr;
 
 typedef struct _TypeDescriptor {
@@ -65,12 +66,11 @@ typedef struct _ParameterDescriptor {
 typedef struct {
     int returnDisplacement;
     TypeDescriptorPtr returnType;
-    ParameterDescriptorPtr params;
+    List* params; // List of SymbolTableEntry of category PARAMETER_SYMBOL
 } FunctionDescriptor, *FunctionDescriptorPtr;
 
 typedef struct {
     char* mepaLabel;
-
     bool defined;
 } LabelDescriptor, *LabelDescriptorPtr;
 
@@ -106,6 +106,13 @@ typedef struct {
 } SymbolTable, *SymbolTablePtr;
 
 SymbolTablePtr initializeSymbolTable();
+
+SymbolTableEntryPtr findIdentifier(SymbolTablePtr symbolTable, char* identifier);
+
+SymbolTableEntryPtr newParameter(int level, char* identifier, int displacement, TypeDescriptorPtr type, ParameterPassage parameterPassage);
+SymbolTableEntryPtr newFunctionParameter(SymbolTableEntryPtr functionEntry, int displacement);
+SymbolTableEntryPtr newFunctionDescriptor(int level, char* identifier, TypeDescriptorPtr returnType, List* paramEntries); // list of parameters as SymbolTableEntryPtr
+void addSymbolTableEntry(SymbolTablePtr symbolTable, SymbolTableEntryPtr entry);
 
 bool equivalentTypes(TypeDescriptorPtr type1, TypeDescriptorPtr type2);
 

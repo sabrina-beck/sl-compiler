@@ -2,12 +2,31 @@
 #include "tree.h"
 #include "slc.h"
 #include "utils.h"
+#include "datastructures.h"
 
 #include <stdio.h>
 #include <stdarg.h>
 
 void processFunction(TreeNodePtr node, bool mainFunction);
 
+/* Function Header */
+SymbolTableEntryPtr processFunctionHeader(TreeNodePtr node);
+
+TypeDescriptorPtr processFunctionReturnType(TreeNodePtr node);
+
+List* processFormalParameterList(TreeNodePtr node);
+List* processFormalParameter(TreeNodePtr node, int* displacement);
+List* processParameterByReferenceDeclaration(TreeNodePtr node, int* displacement);
+List* processParameterByValueDeclaration(TreeNodePtr node, int* displacement);
+List* processParameterDeclaration(TreeNodePtr node, ParameterPassage passage, int* displacement);
+SymbolTableEntryPtr processFunctionParameterDeclaration(TreeNodePtr node, int* displacement);
+
+/* Block */
+
+// ...
+Stack* processIdentifierList(TreeNodePtr node);
+TypeDescriptorPtr processTypeIdentifier(TreeNodePtr node);
+char* processIdentifier(TreeNodePtr node);
 // ...
 
 void processUnlabeledStatement(TreeNodePtr node);
@@ -50,6 +69,11 @@ void printProgram();
 SymbolTablePtr getSymbolTable();
 
 /**
+ * Function Level
+ **/
+int currentFunctionLevel = 0;
+
+/**
  * Implementations
  **/
 void processProgram(void *p) {
@@ -63,16 +87,174 @@ void processProgram(void *p) {
 }
 
 void processFunction(TreeNodePtr node, bool mainFunction) {
-    if(mainFunction) {
-        addCommand("MAIN");
+    if(node->category != FUNCTION_NODE) {
+        UnexpectedNodeCategoryError(FUNCTION_NODE, node->category);
     }
 
-    // [...]
+    if(mainFunction) {
+        addCommand("MAIN");
+    } else {
+        addCommand("ENFN %d", currentFunctionLevel);
+    }
+
+    TreeNodePtr functionHeaderNode = node->subtrees[0];
+    SymbolTableEntryPtr functionSymbolTableEntry = processFunctionHeader(functionHeaderNode);
+    addSymbolTableEntry(getSymbolTable(), functionSymbolTableEntry);
+
+    TreeNodePtr blockNode = node->subtrees[1];
+    // TODO processBlock()
 
     if(mainFunction) {
         addCommand("STOP");
+    } else {
+        // TODO addCommand("RTRN %d", numberOfParameters);
     }
 }
+
+SymbolTableEntryPtr processFunctionHeader(TreeNodePtr node) {
+    if(node->category != FUNCTION_HEADER_NODE) {
+        UnexpectedNodeCategoryError(FUNCTION_HEADER_NODE, node->category);
+    }
+
+    TreeNodePtr returnTypeNode = node->subtrees[0];
+    TypeDescriptorPtr returnType = processFunctionReturnType(returnTypeNode);
+
+    TreeNodePtr identifierNode = node->subtrees[1];
+    char* identifier = processIdentifier(identifierNode);
+
+    TreeNodePtr formalParametersNode = node->subtrees[2];
+    List* parameters = processFormalParameterList(formalParametersNode);
+
+    return newFunctionDescriptor(currentFunctionLevel, identifier, returnType, parameters);
+}
+
+TypeDescriptorPtr processFunctionReturnType(TreeNodePtr node) {
+    if(node == NULL) { // VOID function
+        return NULL;
+    }
+
+    return processTypeIdentifier(node);
+}
+
+List* processFormalParameterList(TreeNodePtr node) {
+    int parametersDisplacement = -5; // FIXME explain
+    processFormalParameter(node, &parametersDisplacement);
+}
+
+List* processFormalParameter(TreeNodePtr node, int* displacement) {
+    if(node == NULL) {
+        return NULL;
+    }
+
+    List* nextParams = processFormalParameter(node->next, displacement); // process parameters in reversed order
+
+    List* params;
+    switch (node->category) {
+        case EXPRESSION_PARAMETER_BY_REFERENCE_NODE:
+            params = processParameterByReferenceDeclaration(node, displacement);
+            break;
+        case EXPRESSION_PARAMETER_BY_VALUE_NODE:
+            params = processParameterByValueDeclaration(node, displacement);
+            break;
+        case FUNCTION_PARAMETER_NODE:
+            params = newList();
+            SymbolTableEntryPtr functionParameter = processFunctionParameterDeclaration(node, displacement);
+            add(params, functionParameter);
+            break;
+        default:
+            UnexpectedChildNodeCategoryError(FUNCTION_HEADER_NODE, node->category);
+    }
+
+    params = concat(params, nextParams);
+    free(nextParams);
+}
+
+List* processParameterByReferenceDeclaration(TreeNodePtr node, int* displacement) {
+    if(node->category != EXPRESSION_PARAMETER_BY_REFERENCE_NODE) {
+        UnexpectedNodeCategoryError(EXPRESSION_PARAMETER_BY_REFERENCE_NODE, node->category);
+    }
+
+    return processParameterDeclaration(node, VARIABLE_PARAMETER, displacement);
+}
+
+List* processParameterByValueDeclaration(TreeNodePtr node, int* displacement) {
+    if(node->category != EXPRESSION_PARAMETER_BY_VALUE_NODE) {
+        UnexpectedNodeCategoryError(EXPRESSION_PARAMETER_BY_VALUE_NODE, node->category);
+    }
+
+    return processParameterDeclaration(node, VALUE_PARAMETER, displacement);
+}
+
+List* processParameterDeclaration(TreeNodePtr node, ParameterPassage passage, int* displacement) {
+    TreeNodePtr parameterIdentifierNode = node->subtrees[0];
+    Stack* identifiers = processIdentifierList(node);
+
+    TreeNodePtr typeIdentifierNode = node->subtrees[1];
+    TypeDescriptorPtr type = processTypeIdentifier(typeIdentifierNode);
+
+    List* parameters = newList();
+
+    char* identifier = pop(identifiers);
+    while (identifier != NULL) {
+        SymbolTableEntryPtr entry = newParameter(currentFunctionLevel, identifier, *displacement, type, passage);
+        add(parameters, entry);
+
+        *displacement -= type->size;
+    }
+    free(identifiers);
+
+    return parameters;
+}
+
+SymbolTableEntryPtr processFunctionParameterDeclaration(TreeNodePtr node, int* displacement) {
+    if(node->category != FUNCTION_PARAMETER_NODE) {
+        UnexpectedNodeCategoryError(FUNCTION_PARAMETER_NODE, node->category);
+    }
+
+    TreeNodePtr functionHeaderNode = node->subtrees[0];
+    SymbolTableEntryPtr functionEntry = processFunctionHeader(functionHeaderNode);
+
+    SymbolTableEntryPtr functionParameterEntry = newFunctionParameter(functionEntry, *displacement);
+    *displacement -= functionParameterEntry->description.parameterDescriptor->type->size;
+
+    return functionParameterEntry;
+}
+
+// ...
+
+Stack* processIdentifierList(TreeNodePtr node) {
+    Stack * identifiers = newStack();
+
+    TreeNodePtr current = node;
+    while (current != NULL) {
+        char* identifier = processIdentifier(current);
+        push(identifiers, identifier);
+        current = current->next;
+    }
+
+    return identifiers;
+}
+
+TypeDescriptorPtr processTypeIdentifier(TreeNodePtr node) {
+    SymbolTablePtr symbolTable = getSymbolTable();
+
+    char* identifier = processIdentifier(node);
+    SymbolTableEntryPtr entry = findIdentifier(symbolTable, identifier);
+
+    if(entry->category != TYPE_SYMBOL) {
+        SemanticError("Expected identifier to be a type but it wasn't");
+    }
+    return entry->description.typeDescriptor;
+}
+
+char* processIdentifier(TreeNodePtr node) {
+    if(node->category != IDENTIFIER_NODE) {
+        UnexpectedNodeCategoryError(IDENTIFIER_NODE, node->category);
+    }
+    return node->name;
+}
+
+// ...
 
 void processUnlabeledStatement(TreeNodePtr node) {
     if(node == NULL) { // treats empty statement
