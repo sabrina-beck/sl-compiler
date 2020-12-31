@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include "utils.h"
 
+// TODO don't forget read / write predefined functions
+
 void processUnlabeledStatement(TreeNodePtr node);
 void processAssignment(TreeNodePtr node);
 
@@ -32,7 +34,19 @@ void processMultiplicativeOperator(TreeNodePtr node);
 
 void processProgram(void *p) {
     TreeNodePtr treeRoot = (TreeNodePtr) p;
-    processExpression(treeRoot);
+
+}
+
+void processFunction(TreeNodePtr node, bool mainFunction) {
+    if(mainFunction) {
+        printf("MAIN");
+    }
+
+    // [...]
+
+    if(mainFunction) {
+        printf("STOP");
+    }
 }
 
 void processUnlabeledStatement(TreeNodePtr node) {

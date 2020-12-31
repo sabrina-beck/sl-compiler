@@ -1,5 +1,6 @@
 #include "tree.h"
 
+#include "utils.h"
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -7,7 +8,6 @@
  * Internal variables and functions declaration
  **/
 
-typedef enum {false, true} bool;
 
 /**
  * Always use getStack() to get the stack, it will ensure that the stack is initialized
