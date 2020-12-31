@@ -46,7 +46,7 @@ Queue* newQueue() {
 }
 
 void enqueue(Queue* queue, void* data) {
-    LinkedNode newNode = newLinkedNode(data, NULL);
+    LinkedNode* newNode = newLinkedNode(data, NULL);
     queue->size++;
 
     if(queue->rear == NULL) {
@@ -63,11 +63,11 @@ void* dequeue(Queue* queue){
         return NULL;
     }
 
-    LinkedNode dequeuedNode = queue->front;
+    LinkedNode* dequeuedNode = queue->front;
     queue->size--;
     queue->front = dequeuedNode->next;
 
-    void* dequeuedData = dequeuedNode.data;
+    void* dequeuedData = dequeuedNode->data;
     freeLinkedNode(dequeuedNode);
     return dequeuedData;
 }

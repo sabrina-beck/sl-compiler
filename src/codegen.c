@@ -4,8 +4,13 @@
 #include "utils.h"
 
 #include <stdio.h>
+#include <stdarg.h>
 
 // TODO don't forget read / write predefined functions
+
+void processFunction(TreeNodePtr node, bool mainFunction);
+
+// ...
 
 void processUnlabeledStatement(TreeNodePtr node);
 void processAssignment(TreeNodePtr node);
@@ -37,20 +42,28 @@ void processMultiplicativeOperator(TreeNodePtr node);
 void UnexpectedNodeCategoryError(NodeCategory expected, NodeCategory gotten);
 void UnexpectedChildNodeCategoryError(NodeCategory fatherNodeCategory, NodeCategory childNodeCategory);
 
+/** Queue with the final program **/
+Queue *programQueue = NULL;
+void addCommand(const char* commandFormat, ...);
+void printProgram();
+
 void processProgram(void *p) {
     TreeNodePtr treeRoot = (TreeNodePtr) p;
 
+    processFunction(treeRoot, true);
+
+    printProgram();
 }
 
 void processFunction(TreeNodePtr node, bool mainFunction) {
     if(mainFunction) {
-        printf("MAIN");
+        addCommand("MAIN");
     }
 
     // [...]
 
     if(mainFunction) {
-        printf("STOP");
+        addCommand("STOP");
     }
 }
 
@@ -114,19 +127,19 @@ void processConditional(TreeNodePtr node) {
     char* elseExitLabel = nextMEPALabel();
 
     processExpression(conditionNode);
-    printf("JUMPF %s\n", elseLabel);
+    addCommand("JUMPF %s", elseLabel);
 
     processCompound(ifCompound);
 
     if(elseCompound != NULL) {
-        printf("JUMP %s\n", elseExitLabel);
+        addCommand("JUMP %s", elseExitLabel);
 
-        printf("%s: NOOP\n", elseLabel);
+        addCommand("%s: NOOP", elseLabel);
         processCompound(elseCompound);
 
-        printf("%s: NOOP\n", elseExitLabel);
+        addCommand("%s: NOOP", elseExitLabel);
     } else {
-        printf("%s: NOOP\n", elseLabel);
+        addCommand("%s: NOOP", elseLabel);
     }
 }
 
@@ -141,14 +154,14 @@ void processRepetitive(TreeNodePtr node) {
     char* conditionLabel = nextMEPALabel(); // L1
     char* exitLabel = nextMEPALabel(); // L2
 
-    printf("%s: NOOP\n", conditionLabel);
+    addCommand("%s: NOOP", conditionLabel);
     processExpression(conditionNode);
-    printf("JUMPF %s", exitLabel);
+    addCommand("JUMPF %s", exitLabel);
 
     processCompound(compoundNode);
-    printf("JUMP %s", conditionLabel);
+    addCommand("JUMP %s", conditionLabel);
 
-    printf("%s: NOOP\n", exitLabel);
+    addCommand("%s: NOOP", exitLabel);
 
 }
 
@@ -304,7 +317,7 @@ void processInteger(TreeNodePtr node) {
     }
 
     char* integer = node->name;
-    printf("LDCT %s\n", integer);
+    addCommand("LDCT %s", integer);
 }
 
 
@@ -315,17 +328,17 @@ void processRelationalOperator(TreeNodePtr node) {
 
     TreeNodePtr operatorNode = node->subtrees[0];
     if(operatorNode->category == LESS_OR_EQUAL_NODE) {
-        printf("LEQU\n");
+        addCommand("LEQU");
     } else if(operatorNode->category == LESS_NODE) {
-        printf("LESS\n");
+        addCommand("LESS");
     } else if(operatorNode->category == EQUAL_NODE) {
-        printf("EQUA\n");
+        addCommand("EQUA");
     } else if(operatorNode->category == DIFFERENT_NODE) {
-        printf("DIFF\n");
+        addCommand("DIFF");
     } else if(operatorNode->category == GREATER_OR_EQUAL_NODE) {
-        printf("GEQU\n");
+        addCommand("GEQU");
     } else if(operatorNode->category == GREATER_NODE) {
-        printf("GRTR\n");
+        addCommand("GRTR");
     } else {
         UnexpectedChildNodeCategoryError(RELATIONAL_OPERATOR_NODE, operatorNode->category);
     }
@@ -338,11 +351,11 @@ void processAdditiveOperator(TreeNodePtr node) {
 
     TreeNodePtr operatorNode = node->subtrees[0];
     if(operatorNode->category == PLUS_NODE) {
-        printf("ADDD\n");
+        addCommand("ADDD");
     } else if(operatorNode->category == MINUS_NODE) {
-        printf("SUBT\n");
+        addCommand("SUBT");
     } else if(operatorNode->category == OR_NODE) {
-        printf("LORR\n");
+        addCommand("LORR");
     } else {
         UnexpectedChildNodeCategoryError(ADDITIVE_OPERATOR_NODE, operatorNode->category);
     }
@@ -357,9 +370,9 @@ void processUnaryOperator(TreeNodePtr node) {
     if(operatorNode->category == PLUS_NODE) {
         // this operator has no practical effect
     } else if(operatorNode->category == MINUS_NODE) {
-        printf("NEGT\n");
+        addCommand("NEGT");
     } else if(operatorNode->category == NOT_NODE) {
-        printf("LNOT\n");
+        addCommand("LNOT");
     } else {
         UnexpectedChildNodeCategoryError(UNARY_OPERATOR_NODE, operatorNode->category);
     }
@@ -372,11 +385,11 @@ void processMultiplicativeOperator(TreeNodePtr node) {
 
     TreeNodePtr operatorNode = node->subtrees[0];
     if(operatorNode->category == MULTIPLY_NODE) {
-        printf("MULT\n");
+        addCommand("MULT");
     } else if(operatorNode->category == DIV_NODE) {
-        printf("DIVI\n");
+        addCommand("DIVI");
     } else if(operatorNode->category == AND_NODE) {
-        printf("LAND\n");
+        addCommand("LAND");
     } else {
         UnexpectedChildNodeCategoryError(MULTIPLICATIVE_OPERATOR_NODE, operatorNode->category);
     }
@@ -393,4 +406,33 @@ void UnexpectedChildNodeCategoryError(NodeCategory fatherNodeCategory, NodeCateg
     sprintf(message, "For node category %s, got unexpected child node category %s",
             getCategoryName(fatherNodeCategory), getCategoryName(childNodeCategory));
     SemanticError(message);
+}
+
+Queue *getProgramQueue() {
+    if(programQueue == NULL) {
+        programQueue = newQueue();
+    }
+    return programQueue;
+}
+
+void addCommand(const char* commandFormat, ...) {
+    Queue* programQueue = getProgramQueue();
+
+    va_list args;
+    va_start(args, commandFormat);
+    char* command = malloc(sizeof(char)*255);
+    vsprintf(command, commandFormat, args);
+    va_end(args);
+
+    enqueue(programQueue, command);
+}
+
+void printProgram() {
+    Queue* programQueue = getProgramQueue();
+
+    while (programQueue->size > 0) {
+        char* command = (char*) dequeue(programQueue);
+        printf("%s\n", command);
+        free(command);
+    }
 }
