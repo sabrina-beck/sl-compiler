@@ -92,6 +92,5 @@ typedef struct _symbolTableEntry {
     } description;
 } SymbolTableEntry, *SymbolTableEntryPtr;
 
-// TODO SymbolTableEntryPtr symbolTable = NULL; // initialization
-
 char* nextMEPALabel();
+

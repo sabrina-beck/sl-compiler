@@ -2,7 +2,7 @@
 
 #include <stdlib.h>
 
-/* Auxiliary functions for memory allocation and deallocation of the stack nodes */
+/** Auxiliary functions for memory allocation and deallocation of the stack nodes **/
 LinkedNode* newLinkedNode(void* data, LinkedNode* next);
 void freeLinkedNode(LinkedNode* node);
 
