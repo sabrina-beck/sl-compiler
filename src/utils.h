@@ -1,20 +1,11 @@
 #include <stdlib.h>
 
-typedef enum {false, true} bool;
+#include "datastructures.h"
 
 typedef enum {
     VALUE_PARAMETER,
     VARIABLE_PARAMETER
 } ParameterPassage;
-
-typedef enum {
-    TYPE_SYMBOL, // boolean and integer
-    CONSTANT_SYMBOL, // true and false
-    VARIABLE_SYMBOL,
-    PARAMETER_SYMBOL,
-    FUNCTION_SYMBOL, // where are read and write?????
-    LABEL_SYMBOL,
-} SymbolTableCategory;
 
 struct _TypeDescriptor;
 struct _ParameterDescriptor;
@@ -23,12 +14,17 @@ typedef enum {
     PREDEFINED_TYPE,
     ARRAY_TYPE,
     FUNCTION_TYPE
-} TypeConstr;
+} TypeCategory;
 
 typedef enum {
     INTEGER,
     BOOLEAN
 } PredefinedType;
+
+typedef enum {
+    READ,
+    WRITE
+} PseudoFunction;
 
 typedef struct {
     int dimension; // number of elements
@@ -41,7 +37,7 @@ typedef struct {
 } FunctionTypeDescriptor, *FunctionTypeDescriptorPtr;
 
 typedef struct _TypeDescriptor {
-    TypeConstr constr;
+    TypeCategory category;
     int size;
     union { // depends on constr
         PredefinedType predefinedType;
@@ -67,30 +63,51 @@ typedef struct _ParameterDescriptor {
 } ParameterDescriptor, *ParameterDescriptorPtr;
 
 typedef struct {
-    int displacement; ///????
-    TypeDescriptorPtr type;
+    int returnDisplacement;
+    TypeDescriptorPtr returnType;
     ParameterDescriptorPtr params;
 } FunctionDescriptor, *FunctionDescriptorPtr;
 
 typedef struct {
     char* mepaLabel;
+
     bool defined;
 } LabelDescriptor, *LabelDescriptorPtr;
 
-typedef struct _symbolTableEntry {
+typedef enum {
+    TYPE_SYMBOL, // boolean and integer
+    CONSTANT_SYMBOL, // true and false
+    VARIABLE_SYMBOL,
+    PARAMETER_SYMBOL,
+    PSEUDO_FUNCTION_SYMBOL, // deal with read and write psudo functions
+    FUNCTION_SYMBOL,
+    LABEL_SYMBOL,
+} SymbolTableCategory;
+
+typedef struct {
     SymbolTableCategory category;
     char* identifier;
     int level;
-    struct _symbolTableEntry* next;
     union { // it depends on category type
+        TypeDescriptorPtr typeDescriptor;
         ConstantDescriptorPtr constantDescriptor;
         VariableDescriptorPtr variableDescriptor;
         ParameterDescriptorPtr parameterDescriptor;
         FunctionDescriptorPtr functionDescriptor;
         LabelDescriptorPtr labelDescriptor;
-        TypeDescriptorPtr typeDescriptor;
+        PseudoFunction pseudoFunction;
     } description;
 } SymbolTableEntry, *SymbolTableEntryPtr;
+
+typedef struct {
+    Stack* stack;
+    TypeDescriptorPtr integerTypeDescriptor;
+    TypeDescriptorPtr booleanTypeDescriptor;
+} SymbolTable, *SymbolTablePtr;
+
+SymbolTablePtr initializeSymbolTable();
+
+bool equivalentTypes(TypeDescriptorPtr type1, TypeDescriptorPtr type2);
 
 char* nextMEPALabel();
 

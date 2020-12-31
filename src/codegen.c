@@ -6,8 +6,6 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-// TODO don't forget read / write predefined functions
-
 void processFunction(TreeNodePtr node, bool mainFunction);
 
 // ...
@@ -24,29 +22,36 @@ void processUnlabeledStatementList(TreeNodePtr node);
 
 // ...
 
-void processExpression(TreeNodePtr node);
-void routeExpressionSubtree(TreeNodePtr node);
-void processBinaryOpExpression(TreeNodePtr node);
-void processUnopExpression(TreeNodePtr node);
-void processAdditiveOperation(TreeNodePtr node);
-void processTerm(TreeNodePtr node);
-void processMultiplicativeOperation(TreeNodePtr node);
-void processFactor(TreeNodePtr node);
-void processInteger(TreeNodePtr node);
-void processRelationalOperator(TreeNodePtr node);
-void processAdditiveOperator(TreeNodePtr node);
-void processUnaryOperator(TreeNodePtr node);
-void processMultiplicativeOperator(TreeNodePtr node);
+TypeDescriptorPtr processExpression(TreeNodePtr node);
+TypeDescriptorPtr routeExpressionSubtree(TreeNodePtr node);
+TypeDescriptorPtr processBinaryOpExpression(TreeNodePtr node);
+TypeDescriptorPtr processUnopExpression(TreeNodePtr node);
+TypeDescriptorPtr processAdditiveOperation(TreeNodePtr node);
+TypeDescriptorPtr processTerm(TreeNodePtr node);
+TypeDescriptorPtr processMultiplicativeOperation(TreeNodePtr node);
+TypeDescriptorPtr processFactor(TreeNodePtr node);
+TypeDescriptorPtr processInteger(TreeNodePtr node);
+TypeDescriptorPtr processRelationalOperator(TreeNodePtr node);
+TypeDescriptorPtr processAdditiveOperator(TreeNodePtr node);
+TypeDescriptorPtr processUnaryOperator(TreeNodePtr node);
+TypeDescriptorPtr processMultiplicativeOperator(TreeNodePtr node);
 
 /** Error Handling **/
 void UnexpectedNodeCategoryError(NodeCategory expected, NodeCategory gotten);
 void UnexpectedChildNodeCategoryError(NodeCategory fatherNodeCategory, NodeCategory childNodeCategory);
 
 /** Queue with the final program **/
-Queue *programQueue = NULL;
 void addCommand(const char* commandFormat, ...);
 void printProgram();
 
+/**
+ * Symbol Table
+ **/
+SymbolTablePtr getSymbolTable();
+
+/**
+ * Implementations
+ **/
 void processProgram(void *p) {
     TreeNodePtr treeRoot = (TreeNodePtr) p;
 
@@ -186,7 +191,7 @@ void processUnlabeledStatementList(TreeNodePtr node) {
 }
 // ...
 
-void processExpression(TreeNodePtr node) {
+TypeDescriptorPtr processExpression(TreeNodePtr node) {
     if(node->category != EXPRESSION_NODE) {
         UnexpectedNodeCategoryError(EXPRESSION_NODE, node->category);
     }
@@ -195,25 +200,32 @@ void processExpression(TreeNodePtr node) {
     TreeNodePtr relationalOperatorNode = node->subtrees[1];
     TreeNodePtr binaryopExprNode = node->subtrees[2];
 
-    routeExpressionSubtree(childExprNode);
-    processBinaryOpExpression(binaryopExprNode);
-    processRelationalOperator(relationalOperatorNode);
+    TypeDescriptorPtr firstExprType = routeExpressionSubtree(childExprNode);
+    TypeDescriptorPtr secondExprType = processBinaryOpExpression(binaryopExprNode);
+    TypeDescriptorPtr operatorType = processRelationalOperator(relationalOperatorNode);
+
+    if(!equivalentTypes(firstExprType, secondExprType)) {
+        SemanticError("Expressions of incompatible type");
+    }
+
+    if(operatorType != NULL) {
+        return operatorType;
+    }
+    return firstExprType;
 }
 
-void routeExpressionSubtree(TreeNodePtr node) {
+TypeDescriptorPtr routeExpressionSubtree(TreeNodePtr node) {
     switch (node->category) {
         case BINARY_OPERATOR_EXPRESSION_NODE:
-            processBinaryOpExpression(node);
-        break;
+            return processBinaryOpExpression(node);
         case UNARY_OPERATOR_EXPRESSION_NODE:
-            processUnopExpression(node);
-        break;
+            return processUnopExpression(node);
         default:
             UnexpectedChildNodeCategoryError(EXPRESSION_NODE, node->category);
     }
 }
 
-void processBinaryOpExpression(TreeNodePtr node) {
+TypeDescriptorPtr processBinaryOpExpression(TreeNodePtr node) {
     if(node->category != BINARY_OPERATOR_EXPRESSION_NODE) {
         UnexpectedNodeCategoryError(BINARY_OPERATOR_EXPRESSION_NODE, node->category);
     }
@@ -221,11 +233,17 @@ void processBinaryOpExpression(TreeNodePtr node) {
     TreeNodePtr termNode = node->subtrees[0];
     TreeNodePtr additiveOperationNode = node->subtrees[1];
 
-    processTerm(termNode);
-    processAdditiveOperation(additiveOperationNode);
+    TypeDescriptorPtr termType = processTerm(termNode);
+    TypeDescriptorPtr additiveOpType = processAdditiveOperation(additiveOperationNode);
+
+    if(!equivalentTypes(termType, additiveOpType)) {
+        SemanticError("Expression's terms have incompatible types");
+    }
+
+    return termType;
 }
 
-void processUnopExpression(TreeNodePtr node) {
+TypeDescriptorPtr processUnopExpression(TreeNodePtr node) {
     if(node->category != UNARY_OPERATOR_EXPRESSION_NODE) {
         UnexpectedNodeCategoryError(UNARY_OPERATOR_EXPRESSION_NODE, node->category);
     }
@@ -234,14 +252,24 @@ void processUnopExpression(TreeNodePtr node) {
     TreeNodePtr termNode = node->subtrees[1];
     TreeNodePtr additiveOperationNode = node->subtrees[2];
 
-    processTerm(termNode);
-    processUnaryOperator(unaryOperatorNode);
-    processAdditiveOperation(additiveOperationNode);
+    TypeDescriptorPtr termType = processTerm(termNode);
+    TypeDescriptorPtr operatorType = processUnaryOperator(unaryOperatorNode);
+    TypeDescriptorPtr additiveOpType = processAdditiveOperation(additiveOperationNode);
+
+    if(!equivalentTypes(termType, operatorType)) {
+        SemanticError("Expression's term type incompatible with unary operator");
+    }
+
+    if(!equivalentTypes(termType, additiveOpType)) {
+        SemanticError("Expression's terms have incompatible types");
+    }
+
+    return operatorType;
 }
 
-void processAdditiveOperation(TreeNodePtr node) {
+TypeDescriptorPtr processAdditiveOperation(TreeNodePtr node) {
     if(node == NULL) {
-        return;
+        return NULL;
     }
 
     if(node->category != ADDITIVE_OPERATION_NODE) {
@@ -252,12 +280,22 @@ void processAdditiveOperation(TreeNodePtr node) {
     TreeNodePtr termNode = node->subtrees[1];
     TreeNodePtr additiveOperationNode = node->subtrees[2];
 
-    processTerm(termNode);
-    processAdditiveOperator(operatorNode);
-    processAdditiveOperation(additiveOperationNode);
+    TypeDescriptorPtr termType = processTerm(termNode);
+    TypeDescriptorPtr operatorType = processAdditiveOperator(operatorNode);
+    TypeDescriptorPtr additiveOpType = processAdditiveOperation(additiveOperationNode);
+
+    if(!equivalentTypes(termType, additiveOpType)) {
+        SemanticError("Expression's terms have incompatible types");
+    }
+
+    if(!equivalentTypes(termType, operatorType)) {
+        SemanticError("Expression's terms type incompatible with operator");
+    }
+
+    return operatorType;
 }
 
-void processTerm(TreeNodePtr node) {
+TypeDescriptorPtr processTerm(TreeNodePtr node) {
     if(node->category != TERM_NODE) {
         UnexpectedNodeCategoryError(TERM_NODE, node->category);
     }
@@ -265,13 +303,19 @@ void processTerm(TreeNodePtr node) {
     TreeNodePtr factorNode = node->subtrees[0];
     TreeNodePtr multiplicativeOperationNode = node->subtrees[1];
 
-    processFactor(factorNode);
-    processMultiplicativeOperation(multiplicativeOperationNode);
+    TypeDescriptorPtr factorType = processFactor(factorNode);
+    TypeDescriptorPtr multiplicativeOpType = processMultiplicativeOperation(multiplicativeOperationNode);
+
+    if(!equivalentTypes(factorType, multiplicativeOpType)) {
+        SemanticError("Term's factors of incompatible types");
+    }
+
+    return factorType;
 }
 
-void processMultiplicativeOperation(TreeNodePtr node) {
+TypeDescriptorPtr processMultiplicativeOperation(TreeNodePtr node) {
     if(node == NULL) {
-        return;
+        return NULL;
     }
 
     if(node->category != MULTIPLICATIVE_OPERATION_NODE) {
@@ -282,12 +326,22 @@ void processMultiplicativeOperation(TreeNodePtr node) {
     TreeNodePtr factorNode = node->subtrees[1];
     TreeNodePtr multiplicativeOperationNode = node->subtrees[2];
 
-    processFactor(factorNode);
-    processMultiplicativeOperator(operatorNode);
-    processMultiplicativeOperation(multiplicativeOperationNode);
+    TypeDescriptorPtr factorType = processFactor(factorNode);
+    TypeDescriptorPtr operatorType = processMultiplicativeOperator(operatorNode);
+    TypeDescriptorPtr multiplicativeOpType = processMultiplicativeOperation(multiplicativeOperationNode);
+
+    if(!equivalentTypes(factorType, multiplicativeOpType)) {
+        SemanticError("Term's factors have incompatible types");
+    }
+
+    if(!equivalentTypes(factorType, operatorType)) {
+        SemanticError("Term's factors type incompatible with operator");
+    }
+
+    return operatorType;
 }
 
-void processFactor(TreeNodePtr node) {
+TypeDescriptorPtr processFactor(TreeNodePtr node) {
     if(node->category != FACTOR_NODE) {
         UnexpectedNodeCategoryError(FACTOR_NODE, node->category);
     }
@@ -295,107 +349,130 @@ void processFactor(TreeNodePtr node) {
     TreeNodePtr specificFactor = node->subtrees[0];
     switch (specificFactor->category) {
         case VARIABLE_NODE:
-            //TODO processVariable();
+            //TODO return processVariable();
             //TODO LDVL
-        break;
+            break;
         case INTEGER_NODE:
-            processInteger(specificFactor);
-        break;
+            return processInteger(specificFactor);
         case FUNCTION_CALL_NODE:
-            //TODO processFunctionCall();
-        break;
+            //TODO return processFunctionCall();
+            break;
         case EXPRESSION_NODE:
-            processExpression(node);
-        break;
+            return processExpression(node);
         default:
             UnexpectedChildNodeCategoryError(FACTOR_NODE, specificFactor->category);
     }
 }
 
 
-void processInteger(TreeNodePtr node) {
+TypeDescriptorPtr processInteger(TreeNodePtr node) {
     if(node->category != INTEGER_NODE) {
         UnexpectedNodeCategoryError(INTEGER_NODE, node->category);
     }
 
     char* integer = node->name;
     addCommand("LDCT %s", integer);
+
+    return getSymbolTable()->integerTypeDescriptor;
 }
 
 
-void processRelationalOperator(TreeNodePtr node) {
+TypeDescriptorPtr processRelationalOperator(TreeNodePtr node) {
     if(node->category != RELATIONAL_OPERATOR_NODE) {
         UnexpectedNodeCategoryError(RELATIONAL_OPERATOR_NODE, node->category);
     }
 
     TreeNodePtr operatorNode = node->subtrees[0];
-    if(operatorNode->category == LESS_OR_EQUAL_NODE) {
-        addCommand("LEQU");
-    } else if(operatorNode->category == LESS_NODE) {
-        addCommand("LESS");
-    } else if(operatorNode->category == EQUAL_NODE) {
-        addCommand("EQUA");
-    } else if(operatorNode->category == DIFFERENT_NODE) {
-        addCommand("DIFF");
-    } else if(operatorNode->category == GREATER_OR_EQUAL_NODE) {
-        addCommand("GEQU");
-    } else if(operatorNode->category == GREATER_NODE) {
-        addCommand("GRTR");
-    } else {
-        UnexpectedChildNodeCategoryError(RELATIONAL_OPERATOR_NODE, operatorNode->category);
+    switch (operatorNode->category) {
+        case LESS_OR_EQUAL_NODE:
+            addCommand("LEQU");
+            break;
+        case LESS_NODE:
+            addCommand("LESS");
+            break;
+        case EQUAL_NODE:
+            addCommand("EQUA");
+            break;
+        case DIFFERENT_NODE:
+            addCommand("DIFF");
+            break;
+        case GREATER_OR_EQUAL_NODE:
+            addCommand("GEQU");
+            break;
+        case GREATER_NODE:
+            addCommand("GRTR");
+            break;
+        default:
+            UnexpectedChildNodeCategoryError(RELATIONAL_OPERATOR_NODE, operatorNode->category);
     }
+
+    return getSymbolTable()->booleanTypeDescriptor;
 }
 
-void processAdditiveOperator(TreeNodePtr node) {
+TypeDescriptorPtr processAdditiveOperator(TreeNodePtr node) {
     if(node->category != ADDITIVE_OPERATOR_NODE) {
         UnexpectedNodeCategoryError(ADDITIVE_OPERATOR_NODE, node->category);
     }
 
     TreeNodePtr operatorNode = node->subtrees[0];
-    if(operatorNode->category == PLUS_NODE) {
-        addCommand("ADDD");
-    } else if(operatorNode->category == MINUS_NODE) {
-        addCommand("SUBT");
-    } else if(operatorNode->category == OR_NODE) {
-        addCommand("LORR");
-    } else {
-        UnexpectedChildNodeCategoryError(ADDITIVE_OPERATOR_NODE, operatorNode->category);
+    switch (operatorNode->category) {
+        case PLUS_NODE:
+            addCommand("ADDD");
+            return getSymbolTable()->integerTypeDescriptor;
+        case MINUS_NODE:
+            addCommand("SUBT");
+            return getSymbolTable()->integerTypeDescriptor;
+        case OR_NODE:
+            addCommand("LORR");
+            return getSymbolTable()->booleanTypeDescriptor;
+        default:
+            UnexpectedChildNodeCategoryError(ADDITIVE_OPERATOR_NODE, operatorNode->category);
     }
 }
 
-void processUnaryOperator(TreeNodePtr node) {
+TypeDescriptorPtr processUnaryOperator(TreeNodePtr node) {
     if(node->category != UNARY_OPERATOR_NODE) {
         UnexpectedNodeCategoryError(UNARY_OPERATOR_NODE, node->category);
     }
 
     TreeNodePtr operatorNode = node->subtrees[0];
-    if(operatorNode->category == PLUS_NODE) {
-        // this operator has no practical effect
-    } else if(operatorNode->category == MINUS_NODE) {
-        addCommand("NEGT");
-    } else if(operatorNode->category == NOT_NODE) {
-        addCommand("LNOT");
-    } else {
-        UnexpectedChildNodeCategoryError(UNARY_OPERATOR_NODE, operatorNode->category);
+    switch (operatorNode->category) {
+        case PLUS_NODE:
+            // this operator has no practical effect
+            return getSymbolTable()->integerTypeDescriptor;
+        case MINUS_NODE:
+            addCommand("NEGT");
+            return getSymbolTable()->integerTypeDescriptor;
+        case NOT_NODE:
+            addCommand("LNOT");
+            return getSymbolTable()->booleanTypeDescriptor;
+        default:
+            UnexpectedChildNodeCategoryError(UNARY_OPERATOR_NODE, operatorNode->category);
     }
 }
 
-void processMultiplicativeOperator(TreeNodePtr node) {
+TypeDescriptorPtr processMultiplicativeOperator(TreeNodePtr node) {
     if(node->category != MULTIPLICATIVE_OPERATOR_NODE) {
         UnexpectedNodeCategoryError(MULTIPLICATIVE_OPERATOR_NODE, node->category);
     }
 
     TreeNodePtr operatorNode = node->subtrees[0];
-    if(operatorNode->category == MULTIPLY_NODE) {
-        addCommand("MULT");
-    } else if(operatorNode->category == DIV_NODE) {
-        addCommand("DIVI");
-    } else if(operatorNode->category == AND_NODE) {
-        addCommand("LAND");
-    } else {
-        UnexpectedChildNodeCategoryError(MULTIPLICATIVE_OPERATOR_NODE, operatorNode->category);
+    switch(operatorNode->category) {
+        case MULTIPLY_NODE:
+            addCommand("MULT");
+            return getSymbolTable()->integerTypeDescriptor;
+        case DIV_NODE:
+            addCommand("DIVI");
+            return getSymbolTable()->integerTypeDescriptor;
+        case AND_NODE:
+            addCommand("LAND");
+            return getSymbolTable()->booleanTypeDescriptor;
+        default:
+            UnexpectedChildNodeCategoryError(MULTIPLICATIVE_OPERATOR_NODE, operatorNode->category);
     }
 }
+
+/** Semantic Errors handling functions **/
 
 void UnexpectedNodeCategoryError(NodeCategory expected, NodeCategory gotten) {
     char message[50];
@@ -410,6 +487,8 @@ void UnexpectedChildNodeCategoryError(NodeCategory fatherNodeCategory, NodeCateg
     SemanticError(message);
 }
 
+/** Program String managament functions **/
+Queue *programQueue = NULL;
 Queue *getProgramQueue() {
     if(programQueue == NULL) {
         programQueue = newQueue();
@@ -437,4 +516,15 @@ void printProgram() {
         printf("      %s\n", command);
         free(command);
     }
+}
+
+/**
+ * Symbol Table
+ **/
+SymbolTablePtr symbolTable = NULL;
+SymbolTablePtr getSymbolTable() {
+    if(symbolTable == NULL) {
+        symbolTable = initializeSymbolTable();
+    }
+    return symbolTable;
 }

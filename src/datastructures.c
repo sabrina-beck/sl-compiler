@@ -33,6 +33,18 @@ void* pop(Stack* stack){
     return data;
 }
 
+void* find(Stack* stack, bool (*predicate)(void*)) {
+    LinkedNode* current = stack->top;
+    while (current != NULL) {
+        void* data = current->data;
+        if(predicate(data)) {
+            return data;
+        }
+    }
+
+    return NULL;
+}
+
 /**
  * Public definitions implementation for Queue
  **/
