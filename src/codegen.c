@@ -1,7 +1,9 @@
 #include "codegen.h"
 #include "tree.h"
-#include <stdio.h>
+#include "slc.h"
 #include "utils.h"
+
+#include <stdio.h>
 
 // TODO don't forget read / write predefined functions
 
@@ -31,6 +33,9 @@ void processAdditiveOperator(TreeNodePtr node);
 void processUnaryOperator(TreeNodePtr node);
 void processMultiplicativeOperator(TreeNodePtr node);
 
+/** Error Handling **/
+void UnexpectedNodeCategoryError(NodeCategory expected, NodeCategory gotten);
+void UnexpectedChildNodeCategoryError(NodeCategory fatherNodeCategory, NodeCategory childNodeCategory);
 
 void processProgram(void *p) {
     TreeNodePtr treeRoot = (TreeNodePtr) p;
@@ -77,14 +82,13 @@ void processUnlabeledStatement(TreeNodePtr node) {
             processCompound(node);
         break;
         default:
-            fprintf(stderr, "Expected unlabeled statement node!\n");
+            UnexpectedChildNodeCategoryError(STATEMENT_NODE, node->category);
     }
 }
 
 void processAssignment(TreeNodePtr node) {
     if(node->category != ASSIGNMENT_NODE) {
-        fprintf(stderr, "Expected assignment node!\n");
-        return;
+        UnexpectedNodeCategoryError(ASSIGNMENT_NODE, node->category);
     }
 
     TreeNodePtr variableNode = node->subtrees[0];
@@ -99,8 +103,7 @@ void processAssignment(TreeNodePtr node) {
 
 void processConditional(TreeNodePtr node) {
     if(node->category != IF_NODE) {
-        fprintf(stderr, "Expected if node!\n");
-        return;
+        UnexpectedNodeCategoryError(IF_NODE, node->category);
     }
 
     TreeNodePtr conditionNode = node->subtrees[0];
@@ -129,8 +132,7 @@ void processConditional(TreeNodePtr node) {
 
 void processRepetitive(TreeNodePtr node) {
     if(node->category != WHILE_NODE) {
-        fprintf(stderr, "Expected while node!\n");
-        return;
+        UnexpectedNodeCategoryError(WHILE_NODE, node->category);
     }
 
     TreeNodePtr conditionNode = node->subtrees[0];
@@ -152,7 +154,7 @@ void processRepetitive(TreeNodePtr node) {
 
 void processCompound(TreeNodePtr node) {
     if(node->category != COMPOUND_NODE) {
-        fprintf(stderr, "Expected compound node!\n");
+        UnexpectedNodeCategoryError(COMPOUND_NODE, node->category);
         return;
     }
 
@@ -171,8 +173,7 @@ void processUnlabeledStatementList(TreeNodePtr node) {
 
 void processExpression(TreeNodePtr node) {
     if(node->category != EXPRESSION_NODE) {
-        fprintf(stderr, "Expected expression node!\n");
-        return;
+        UnexpectedNodeCategoryError(EXPRESSION_NODE, node->category);
     }
 
     TreeNodePtr childExprNode = node->subtrees[0];
@@ -193,14 +194,13 @@ void routeExpressionSubtree(TreeNodePtr node) {
             processUnopExpression(node);
         break;
         default:
-            fprintf(stderr, "Expected sub expression node!\n");
+            UnexpectedChildNodeCategoryError(EXPRESSION_NODE, node->category);
     }
 }
 
 void processBinaryOpExpression(TreeNodePtr node) {
     if(node->category != BINARY_OPERATOR_EXPRESSION_NODE) {
-        fprintf(stderr, "Expected binary operator expression node!\n");
-        return;
+        UnexpectedNodeCategoryError(BINARY_OPERATOR_EXPRESSION_NODE, node->category);
     }
 
     TreeNodePtr termNode = node->subtrees[0];
@@ -212,8 +212,7 @@ void processBinaryOpExpression(TreeNodePtr node) {
 
 void processUnopExpression(TreeNodePtr node) {
     if(node->category != UNARY_OPERATOR_EXPRESSION_NODE) {
-        fprintf(stderr, "Expected unary operator expression node!\n");
-        return;
+        UnexpectedNodeCategoryError(UNARY_OPERATOR_EXPRESSION_NODE, node->category);
     }
 
     TreeNodePtr unaryOperatorNode = node->subtrees[0];
@@ -231,8 +230,7 @@ void processAdditiveOperation(TreeNodePtr node) {
     }
 
     if(node->category != ADDITIVE_OPERATION_NODE) {
-        fprintf(stderr, "Expected additive operation node!\n");
-        return;
+        UnexpectedNodeCategoryError(ADDITIVE_OPERATION_NODE, node->category);
     }
 
     TreeNodePtr operatorNode = node->subtrees[0];
@@ -246,8 +244,7 @@ void processAdditiveOperation(TreeNodePtr node) {
 
 void processTerm(TreeNodePtr node) {
     if(node->category != TERM_NODE) {
-        fprintf(stderr, "Expected term node!\n");
-        return;
+        UnexpectedNodeCategoryError(TERM_NODE, node->category);
     }
 
     TreeNodePtr factorNode = node->subtrees[0];
@@ -263,8 +260,7 @@ void processMultiplicativeOperation(TreeNodePtr node) {
     }
 
     if(node->category != MULTIPLICATIVE_OPERATION_NODE) {
-        fprintf(stderr, "Expected multiplicative operation node!\n");
-        return;
+        UnexpectedNodeCategoryError(MULTIPLICATIVE_OPERATION_NODE, node->category);
     }
 
     TreeNodePtr operatorNode = node->subtrees[0];
@@ -278,8 +274,7 @@ void processMultiplicativeOperation(TreeNodePtr node) {
 
 void processFactor(TreeNodePtr node) {
     if(node->category != FACTOR_NODE) {
-        fprintf(stderr, "Expected factor node!\n");
-        return;
+        UnexpectedNodeCategoryError(FACTOR_NODE, node->category);
     }
 
     TreeNodePtr specificFactor = node->subtrees[0];
@@ -298,15 +293,14 @@ void processFactor(TreeNodePtr node) {
             processExpression(node);
         break;
         default:
-            fprintf(stderr, "Unknown factor category"); // Semantic Error
+            UnexpectedChildNodeCategoryError(FACTOR_NODE, specificFactor->category);
     }
 }
 
 
 void processInteger(TreeNodePtr node) {
     if(node->category != INTEGER_NODE) {
-        fprintf(stderr, "Expected integer node!\n");
-        return;
+        UnexpectedNodeCategoryError(INTEGER_NODE, node->category);
     }
 
     char* integer = node->name;
@@ -316,8 +310,7 @@ void processInteger(TreeNodePtr node) {
 
 void processRelationalOperator(TreeNodePtr node) {
     if(node->category != RELATIONAL_OPERATOR_NODE) {
-        fprintf(stderr, "Expected relational operator node!\n");
-        return;
+        UnexpectedNodeCategoryError(RELATIONAL_OPERATOR_NODE, node->category);
     }
 
     TreeNodePtr operatorNode = node->subtrees[0];
@@ -334,14 +327,13 @@ void processRelationalOperator(TreeNodePtr node) {
     } else if(operatorNode->category == GREATER_NODE) {
         printf("GRTR\n");
     } else {
-        fprintf(stderr, "Unknown relational operator"); // Semantic Error
+        UnexpectedChildNodeCategoryError(RELATIONAL_OPERATOR_NODE, operatorNode->category);
     }
 }
 
 void processAdditiveOperator(TreeNodePtr node) {
     if(node->category != ADDITIVE_OPERATOR_NODE) {
-        fprintf(stderr, "Expected additive operator node!\n");
-        return;
+        UnexpectedNodeCategoryError(ADDITIVE_OPERATOR_NODE, node->category);
     }
 
     TreeNodePtr operatorNode = node->subtrees[0];
@@ -352,14 +344,13 @@ void processAdditiveOperator(TreeNodePtr node) {
     } else if(operatorNode->category == OR_NODE) {
         printf("LORR\n");
     } else {
-        fprintf(stderr, "Unknown additive operator"); // Semantic Error
+        UnexpectedChildNodeCategoryError(ADDITIVE_OPERATOR_NODE, operatorNode->category);
     }
 }
 
 void processUnaryOperator(TreeNodePtr node) {
     if(node->category != UNARY_OPERATOR_NODE) {
-        fprintf(stderr, "Expected unary operator node!\n");
-        return;
+        UnexpectedNodeCategoryError(UNARY_OPERATOR_NODE, node->category);
     }
 
     TreeNodePtr operatorNode = node->subtrees[0];
@@ -370,14 +361,13 @@ void processUnaryOperator(TreeNodePtr node) {
     } else if(operatorNode->category == NOT_NODE) {
         printf("LNOT\n");
     } else {
-        fprintf(stderr, "Unknown unary operator"); // Semantic Error
+        UnexpectedChildNodeCategoryError(UNARY_OPERATOR_NODE, operatorNode->category);
     }
 }
 
 void processMultiplicativeOperator(TreeNodePtr node) {
     if(node->category != MULTIPLICATIVE_OPERATOR_NODE) {
-        fprintf(stderr, "Expected multiplicative operator node!\n");
-        return;
+        UnexpectedNodeCategoryError(MULTIPLICATIVE_OPERATOR_NODE, node->category);
     }
 
     TreeNodePtr operatorNode = node->subtrees[0];
@@ -388,6 +378,19 @@ void processMultiplicativeOperator(TreeNodePtr node) {
     } else if(operatorNode->category == AND_NODE) {
         printf("LAND\n");
     } else {
-        fprintf(stderr, "Unknown multiplicative operator"); // Semantic Error
+        UnexpectedChildNodeCategoryError(MULTIPLICATIVE_OPERATOR_NODE, operatorNode->category);
     }
+}
+
+void UnexpectedNodeCategoryError(NodeCategory expected, NodeCategory gotten) {
+    char message[50];
+    sprintf(message, "Expected %s, but got %s", getCategoryName(expected), getCategoryName(gotten));
+    SemanticError(message);
+}
+
+void UnexpectedChildNodeCategoryError(NodeCategory fatherNodeCategory, NodeCategory childNodeCategory) {
+    char message[100];
+    sprintf(message, "For node category %s, got unexpected child node category %s",
+            getCategoryName(fatherNodeCategory), getCategoryName(childNodeCategory));
+    SemanticError(message);
 }

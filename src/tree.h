@@ -117,4 +117,4 @@ void addIdentifier(char *tokenValue);
  * the prefix "|->" before all the elements on the sequence except the first one
  **/
 void dumpTree(void *p);
-
+const char *getCategoryName(NodeCategory category);
