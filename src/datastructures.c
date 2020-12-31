@@ -7,7 +7,7 @@ LinkedNode* newLinkedNode(void* data, LinkedNode* next);
 void freeLinkedNode(LinkedNode* node);
 
 /**
- * Public definitions implementation
+ * Public definitions implementation for Stack
  **/
 Stack* newStack() {
     Stack* stack = malloc(sizeof(Stack));
@@ -31,6 +31,45 @@ void* pop(Stack* stack){
     freeLinkedNode(poppedNode);
 
     return data;
+}
+
+/**
+ * Public definitions implementation for Queue
+ **/
+
+Queue* newQueue() {
+    Queue* queue = malloc(sizeof(Queue));
+    queue->size = 0;
+    queue->front = NULL;
+    queue->rear = NULL;
+    return queue;
+}
+
+void enqueue(Queue* queue, void* data) {
+    LinkedNode newNode = newLinkedNode(data, NULL);
+    queue->size++;
+
+    if(queue->rear == NULL) {
+        queue->front = newNode;
+        queue->rear = newNode;
+    } else {
+        queue->rear->next = newNode;
+        queue->rear = newNode;
+    }
+}
+
+void* dequeue(Queue* queue){
+    if(queue->front == NULL) {
+        return NULL;
+    }
+
+    LinkedNode dequeuedNode = queue->front;
+    queue->size--;
+    queue->front = dequeuedNode->next;
+
+    void* dequeuedData = dequeuedNode.data;
+    freeLinkedNode(dequeuedNode);
+    return dequeuedData;
 }
 
 /**

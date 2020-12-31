@@ -15,3 +15,13 @@ typedef struct _stack {
 Stack* newStack();
 void push(Stack* stack, void* data);
 void* pop(Stack* stack);
+
+typedef struct _queue {
+    LinkedNode* front;
+    LinkedNode* rear;
+    int size ;
+} Queue;
+
+Queue* newQueue();
+void enqueue(Queue* queue, void* data);
+void* dequeue(Queue* queue);
