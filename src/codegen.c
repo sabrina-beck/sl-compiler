@@ -33,6 +33,7 @@ void processTypeDeclaration(TreeNodePtr node);
 void processVariables(TreeNodePtr node);
 void processVariableDeclaration(TreeNodePtr node, int* displacement);
 
+void processFunctions(TreeNodePtr node);
 
 // ...
 Stack* processIdentifiersAsStack(TreeNodePtr node);
@@ -251,9 +252,9 @@ void processBlock(TreeNodePtr node) {
     TreeNodePtr typesNode = node->subtrees[1];
     processTypes(typesNode);
     TreeNodePtr variablesNode = node->subtrees[2];
-    // TODO
+    processVariables(variablesNode);
     TreeNodePtr functionsNode = node->subtrees[3];
-    // TODO
+    processFunctions(functionsNode);
     TreeNodePtr bodyNode = node->subtrees[4];
     // TODO
 }
@@ -344,6 +345,22 @@ void processVariableDeclaration(TreeNodePtr node, int* displacement) {
     }
 
     free(identifiers);
+}
+
+void processFunctions(TreeNodePtr node) {
+    if(node == NULL) {
+        return;
+    }
+
+    if(node->category != FUNCTIONS_NODE) {
+        UnexpectedNodeCategoryError(FUNCTIONS_NODE, node->category);
+    }
+
+    TreeNodePtr functionNode = node->subtrees[0];
+    while (functionNode != NULL) {
+        processFunction(functionNode, false);
+        functionNode = functionNode->next;
+    }
 }
 
 // ...
