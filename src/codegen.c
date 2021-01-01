@@ -940,10 +940,19 @@ TypeDescriptorPtr processFactor(TreeNodePtr node) {
 
     TreeNodePtr specificFactor = node->subtrees[0];
     switch (specificFactor->category) {
-        case VARIABLE_NODE:
-            //TODO return processVariable();
-            //TODO LDVL
-            break;
+        case VARIABLE_NODE: {
+            VariablePtr variable = processVariable(specificFactor);
+            if (variable->array) {
+                addCommand("LDMV %d", variable->type->size);
+            } else {
+                if (variable->address) {
+                    addCommand("LVLI %d, %d", variable->level, variable->displacement);
+                } else {
+                    addCommand("LDVL %d, %d", variable->level, variable->displacement);
+                }
+            }
+            return variable->type;
+        }
         case INTEGER_NODE: {
             int integer = processInteger(specificFactor);
             addCommand("LDCT %d", integer);
