@@ -125,6 +125,7 @@ void changeToLevelScope(SymbolTablePtr symbolTablePtr, int level);
 int parametersTotalSize(SymbolTableEntryPtr entry); // entry of category FUNCTION_SYMBOL
 
 bool equivalentTypes(TypeDescriptorPtr type1, TypeDescriptorPtr type2);
+bool equivalentFunctions(TypeDescriptorPtr functionType, FunctionDescriptorPtr functionDescriptor);
 
 char* nextMEPALabel();
 

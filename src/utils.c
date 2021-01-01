@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <string.h>
 
+bool equivalentParameters(List* params1, List* params2);
+
 /** Symbol table auxiliary functions **/
 TypeDescriptorPtr newPredefinedTypeDescriptor(int size, PredefinedType predefinedType);
 SymbolTableEntryPtr newConstant(int level, char* identifier, int value, TypeDescriptorPtr typeDescriptor);
@@ -241,8 +243,58 @@ bool equivalentTypes(TypeDescriptorPtr type1, TypeDescriptorPtr type2) {
         return true;
     }
 
-    return type1->category == PREDEFINED_TYPE && type2->category == PREDEFINED_TYPE &&
-    type1->size == type2->size && type1->description.predefinedType == type2->description.predefinedType;
+    switch (type1->category) {
+        case PREDEFINED_TYPE:
+            return type1->category == type2->category &&
+                   type1->size == type2->size &&
+                   type1->description.predefinedType == type2->description.predefinedType;
+        case ARRAY_TYPE:
+            return type1->category == type2->category &&
+                   type1->size == type2->size &&
+                   type1->description.arrayDescriptor->dimension == type2->description.arrayDescriptor->dimension &&
+                   equivalentTypes(type1->description.arrayDescriptor->elementType, type2->description.arrayDescriptor->elementType);
+        case FUNCTION_TYPE: {
+            List* params1 = type1->description.functionTypeDescriptor->params;
+            List* params2 = type2->description.functionTypeDescriptor->params;
+
+            return type1->category == type2->category &&
+                   type1->size == type2->size &&
+                   equivalentTypes(type1->description.functionTypeDescriptor->returnType,
+                                   type2->description.functionTypeDescriptor->returnType) &&
+                   equivalentParameters(params1, params2);
+        }
+    }
+}
+
+bool equivalentFunctions(TypeDescriptorPtr functionType, FunctionDescriptorPtr functionDescriptor) {
+    FunctionTypeDescriptorPtr function1Descriptor = functionType->description.functionTypeDescriptor;
+    return equivalentTypes(function1Descriptor->returnType, functionDescriptor->returnType)
+            && equivalentParameters(function1Descriptor->params, functionDescriptor->params);
+}
+
+bool equivalentParameters(List* params1, List* params2) {
+    if (params1->size != params2->size) {
+        return false;
+    }
+
+    LinkedNode* currentParam1 = params1->front;
+    LinkedNode* currentParam2 = params2->front;
+    while (currentParam1 != NULL && currentParam2 != NULL) {
+        SymbolTableEntryPtr param1 = (SymbolTableEntryPtr) currentParam1->data;
+        TypeDescriptorPtr param1Type = param1->description.parameterDescriptor->type;
+
+        SymbolTableEntryPtr param2 = (SymbolTableEntryPtr) currentParam2->data;
+        TypeDescriptorPtr param2Type = param2->description.parameterDescriptor->type;
+
+        if (!equivalentTypes(param1Type, param2Type)) {
+            return false;
+        }
+
+        currentParam1 = currentParam1->next;
+        currentParam2 = currentParam2->next;
+    }
+
+    return true;
 }
 
 char* nextMEPALabel(){

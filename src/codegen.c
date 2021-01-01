@@ -776,13 +776,13 @@ void processExpressionList(TreeNodePtr node, List* expectedParams) {
     while (paramNode != NULL) {
 
         SymbolTableEntryPtr parameterEntry = (SymbolTableEntryPtr) paramNode->data;
-        ParameterDescriptorPtr parameterDescriptor = parameterEntry->description.parameterDescriptor;
+        ParameterDescriptorPtr expectedParameterDescriptor = parameterEntry->description.parameterDescriptor;
 
-        switch (parameterDescriptor->parameterPassage) {
+        switch (expectedParameterDescriptor->parameterPassage) {
             case VALUE_PARAMETER: {
                 TypeDescriptorPtr expressionType = processExpression(currentNode);
 
-                if(!equivalentTypes(parameterDescriptor->type, expressionType)) {
+                if(!equivalentTypes(expectedParameterDescriptor->type, expressionType)) {
                     SemanticError("Wrong parameter type on function");
                 }
             }
@@ -790,6 +790,11 @@ void processExpressionList(TreeNodePtr node, List* expectedParams) {
             case VARIABLE_PARAMETER: {
                 TreeNodePtr variableNode = getVariableExpression(currentNode);
                 VariablePtr variablePtr = processVariable(variableNode);
+
+                if(!equivalentTypes(expectedParameterDescriptor->type, variablePtr->type)) {
+                    SemanticError("Wrong parameter type on function");
+                }
+
                 if(variablePtr->array) {
                     // process variable already left the address on top of the stack
                 } else {
@@ -803,12 +808,17 @@ void processExpressionList(TreeNodePtr node, List* expectedParams) {
                 break;
             case FUNCTION_PARAMETER: {
                 TreeNodePtr variableNode = getVariableExpression(currentNode);
+
                 TreeNodePtr identifierNode = variableNode->subtrees[0];
                 char* identifier = processIdentifier(identifierNode);
+
                 SymbolTableEntryPtr variableEntry = findIdentifier(getSymbolTable(), identifier);
                 switch (variableEntry->category) {
                     case FUNCTION_SYMBOL: {
                         FunctionDescriptorPtr functionDescriptor = variableEntry->description.functionDescriptor;
+                        if(!equivalentFunctions(expectedParameterDescriptor->type, functionDescriptor)) {
+                            SemanticError("Wrong parameter type on function");
+                        }
                         addCommand("LGAD %s, %d", functionDescriptor->mepaLabel, variableEntry->level - 1);
                     }
                         break;
@@ -818,6 +828,11 @@ void processExpressionList(TreeNodePtr node, List* expectedParams) {
                         if (parameterType->category != FUNCTION_TYPE) {
                             SemanticError("Expected function as parameter");
                         }
+
+                        if(!equivalentTypes(expectedParameterDescriptor->type, parameterDescriptor->type)) {
+                            SemanticError("Wrong parameter type on function");
+                        }
+
                         // generalized address is already on the stack
                         // load the MEPA address
                         addCommand("LDVL %s, %d", variableEntry->level, parameterDescriptor->displacement);
