@@ -65,6 +65,7 @@ typedef struct _ParameterDescriptor {
 
 typedef struct {
     char* mepaLabel;
+    char* returnLabel;
     int returnDisplacement;
     TypeDescriptorPtr returnType;
     List* params; // List of SymbolTableEntry of category PARAMETER_SYMBOL
@@ -109,6 +110,7 @@ typedef struct {
 SymbolTablePtr initializeSymbolTable();
 
 SymbolTableEntryPtr findIdentifier(SymbolTablePtr symbolTable, char* identifier);
+FunctionDescriptorPtr findCurrentFunctionDescriptor(SymbolTablePtr symbolTable, int level);
 
 SymbolTableEntryPtr newParameter(int level, char* identifier, int displacement, TypeDescriptorPtr type, ParameterPassage parameterPassage);
 SymbolTableEntryPtr newFunctionParameter(SymbolTableEntryPtr functionEntry, int displacement);
@@ -118,6 +120,8 @@ SymbolTableEntryPtr newType(int level, char* identifier, TypeDescriptorPtr typeD
 SymbolTableEntryPtr newVariable(int level, char* identifier, int displacement, TypeDescriptorPtr typeDescriptor);
 TypeDescriptorPtr newArrayType(int size, int dimension, TypeDescriptorPtr elementType);
 void addSymbolTableEntry(SymbolTablePtr symbolTable, SymbolTableEntryPtr entry);
+
+
 
 int parametersTotalSize(SymbolTableEntryPtr entry); // entry of category FUNCTION_SYMBOL
 

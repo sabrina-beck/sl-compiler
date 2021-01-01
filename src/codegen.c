@@ -72,7 +72,7 @@ TreeNodePtr getVariableExpression(TreeNodePtr node);
 
 void processGoto(TreeNodePtr node);
 
-// ...
+void processReturn(TreeNodePtr node);
 
 void processConditional(TreeNodePtr node);
 void processRepetitive(TreeNodePtr node);
@@ -581,7 +581,7 @@ void processUnlabeledStatement(TreeNodePtr node) {
             processGoto(node);
         break;
         case RETURN_NODE:
-            // TODO processReturn(node);
+            processReturn(node);
         break;
         case IF_NODE:
             processConditional(node);
@@ -911,7 +911,37 @@ void processGoto(TreeNodePtr node) {
     addCommand("JUMP %s", labelDescriptor->mepaLabel);
 }
 
-// ...
+void processReturn(TreeNodePtr node) {
+    if(node->category != RETURN_NODE) {
+        UnexpectedNodeCategoryError(RETURN_NODE, node->category);
+    }
+
+    FunctionDescriptorPtr functionDescriptor = findCurrentFunctionDescriptor(getSymbolTable(), currentFunctionLevel);
+    if(functionDescriptor == NULL) {
+        SemanticError("Unexpected error, can't find current function descriptor");
+    }
+
+    TreeNodePtr expressionNode = node->subtrees[0];
+    if(expressionNode != NULL) {
+        if(functionDescriptor->returnType == NULL) {
+            SemanticError("Can't return value for void function");
+        }
+
+        TypeDescriptorPtr expressionType = processExpression(expressionNode);
+        if (!equivalentTypes(expressionType, functionDescriptor->returnType)) {
+            SemanticError("Expression with type different than function return type");
+        }
+
+        if(expressionType->size == 1) {
+            addCommand("STVL %d, %d", currentFunctionLevel, functionDescriptor->returnDisplacement);
+        } else {
+            SemanticError("Can't return multiple values"); // TODO check if this is correct
+        }
+    } else if (functionDescriptor->returnType != NULL) {
+        SemanticError("Missing return value for function");
+    }
+
+}
 
 void processConditional(TreeNodePtr node) {
     if(node->category != IF_NODE) {

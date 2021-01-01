@@ -61,6 +61,21 @@ SymbolTableEntryPtr findIdentifier(SymbolTablePtr symbolTable, char* identifier)
     return (SymbolTableEntryPtr) find(symbolTable->stack, identifier, byIdentifierPredicate);
 }
 
+bool byLastFunctionInLevel(void* data, void* secondParam) {
+    SymbolTableEntryPtr entry = (SymbolTableEntryPtr) data;
+    int* level = (int*) secondParam;
+    return entry->category == FUNCTION_SYMBOL && entry->level == *level;
+}
+
+FunctionDescriptorPtr findCurrentFunctionDescriptor(SymbolTablePtr symbolTable, int level) {
+    SymbolTableEntryPtr entry = (SymbolTableEntryPtr) find(symbolTable->stack, &level, byLastFunctionInLevel);
+    if(entry == NULL || entry->category != FUNCTION_SYMBOL) {
+        return NULL;
+    }
+
+    return entry->description.functionDescriptor;
+}
+
 SymbolTableEntryPtr newParameter(int level, char* identifier, int displacement, TypeDescriptorPtr type, ParameterPassage parameterPassage) {
     ParameterDescriptorPtr parameterDescriptor = malloc(sizeof(ParameterDescriptorPtr));
     parameterDescriptor->displacement = displacement;
@@ -99,6 +114,7 @@ SymbolTableEntryPtr newFunctionParameter(SymbolTableEntryPtr functionEntry, int 
 SymbolTableEntryPtr newFunctionDescriptor(int level, char* identifier, char* mepaLabel, TypeDescriptorPtr returnType, List* paramEntries) {
     FunctionDescriptorPtr functionDescriptor = malloc(sizeof(FunctionDescriptor));
     functionDescriptor->mepaLabel = mepaLabel;
+    functionDescriptor->returnLabel = nextMEPALabel();
     functionDescriptor->returnDisplacement = -paramEntries->size - 5; // FIXME explain
     functionDescriptor->returnType = returnType;
     functionDescriptor->params = paramEntries;
