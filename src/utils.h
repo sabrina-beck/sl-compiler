@@ -117,6 +117,8 @@ SymbolTableEntryPtr newType(int level, char* identifier, TypeDescriptorPtr typeD
 SymbolTableEntryPtr newVariable(int level, char* identifier, int displacement, TypeDescriptorPtr typeDescriptor);
 void addSymbolTableEntry(SymbolTablePtr symbolTable, SymbolTableEntryPtr entry);
 
+int parametersTotalSize(SymbolTableEntryPtr entry); // entry of category FUNCTION_SYMBOL
+
 bool equivalentTypes(TypeDescriptorPtr type1, TypeDescriptorPtr type2);
 
 char* nextMEPALabel();

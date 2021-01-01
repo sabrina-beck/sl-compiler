@@ -163,6 +163,27 @@ void addSymbolTableEntry(SymbolTablePtr symbolTable, SymbolTableEntryPtr entry) 
     }
 }
 
+int parametersTotalSize(SymbolTableEntryPtr entry) {
+    if (entry->category != FUNCTION_SYMBOL) {
+        fprintf(stderr, "Expected function entry!");
+        exit(0);
+    }
+
+    int parametersTotalSize = 0;
+
+    List* parameters = entry->description.functionDescriptor->params;
+
+    LinkedNode* current = parameters->front;
+    while (current != NULL) {
+        SymbolTableEntryPtr entry = (SymbolTableEntryPtr) current->data;
+        parametersTotalSize += entry->description.parameterDescriptor->type->size;
+
+        current = current->next;
+    }
+
+    return parametersTotalSize;
+}
+
 bool equivalentTypes(TypeDescriptorPtr type1, TypeDescriptorPtr type2) {
     if(type1 == NULL || type2 == NULL) {
         return true;

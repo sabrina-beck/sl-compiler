@@ -30,7 +30,7 @@ void processLabels(TreeNodePtr node);
 void processTypes(TreeNodePtr node);
 void processTypeDeclaration(TreeNodePtr node);
 
-void processVariables(TreeNodePtr node);
+int processVariables(TreeNodePtr node);
 void processVariableDeclaration(TreeNodePtr node, int* displacement);
 
 void processFunctions(TreeNodePtr node);
@@ -123,7 +123,7 @@ void processFunction(TreeNodePtr node, bool mainFunction) {
     if(mainFunction) {
         addCommand("STOP");
     } else {
-        // TODO addCommand("RTRN %d", numberOfParameters);
+        addCommand("RTRN %d", parametersTotalSize(functionSymbolTableEntry));
     }
 }
 
@@ -249,14 +249,25 @@ void processBlock(TreeNodePtr node) {
 
     TreeNodePtr labelsNode = node->subtrees[0];
     processLabels(labelsNode);
+
     TreeNodePtr typesNode = node->subtrees[1];
     processTypes(typesNode);
+
     TreeNodePtr variablesNode = node->subtrees[2];
-    processVariables(variablesNode);
+    int summedVarsSize = processVariables(variablesNode);
+    if(summedVarsSize > 0) {
+        addCommand("ALOC %d", summedVarsSize);
+    }
+
     TreeNodePtr functionsNode = node->subtrees[3];
     processFunctions(functionsNode);
+
     TreeNodePtr bodyNode = node->subtrees[4];
     // TODO
+
+    if(summedVarsSize > 0) {
+        addCommand("DLOC %d", summedVarsSize);
+    }
 }
 
 void processLabels(TreeNodePtr node) {
@@ -309,9 +320,9 @@ void processTypeDeclaration(TreeNodePtr node) {
     addSymbolTableEntry(getSymbolTable(), typeEntry);
 }
 
-void processVariables(TreeNodePtr node) {
+int processVariables(TreeNodePtr node) {
     if(node == NULL) {
-        return;
+        return 0;
     }
 
     if(node->category != VARIABLES_NODE) {
@@ -320,10 +331,13 @@ void processVariables(TreeNodePtr node) {
 
     TreeNodePtr variableDeclarationNode = node->subtrees[0];
     int displacement = 0;
+    int count = 0;
     while (variableDeclarationNode != NULL) {
         processVariableDeclaration(variableDeclarationNode, &displacement);
         variableDeclarationNode = variableDeclarationNode->next;
     }
+
+    return displacement;
 }
 
 void processVariableDeclaration(TreeNodePtr node, int* displacement) {
