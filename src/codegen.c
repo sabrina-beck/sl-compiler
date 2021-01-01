@@ -755,50 +755,6 @@ void processFunctionCall(TreeNodePtr node) {
     }
 }
 
-/* If the expression is not a single factor, then it is a semantic error */
-TreeNodePtr getVariableExpression(TreeNodePtr node) {
-    TreeNodePtr binaryOpExpressionNode = node->subtrees[0];
-    if(binaryOpExpressionNode->category != BINARY_OPERATOR_EXPRESSION_NODE) {
-        UnexpectedNodeCategoryError(BINARY_OPERATOR_EXPRESSION_NODE, binaryOpExpressionNode->category);
-    }
-
-    TreeNodePtr relationalOperatorNode = node->subtrees[1];
-    TreeNodePtr anotherBinaryIoExpression = node->subtrees[2];
-    if(relationalOperatorNode != NULL || anotherBinaryIoExpression != NULL) {
-        SemanticError("Expected expression to be single factor, but it is relational expression");
-    }
-
-    TreeNodePtr termNode = binaryOpExpressionNode->subtrees[0];
-    if(termNode->category != TERM_NODE) {
-        UnexpectedNodeCategoryError(TERM_NODE, termNode->category);
-    }
-    TreeNodePtr additiveOperationNode = binaryOpExpressionNode->subtrees[1];
-    if(additiveOperationNode != NULL) {
-        SemanticError("Expected expression to be single factor, but it is an additive operation");
-    }
-
-    TreeNodePtr factorNode = termNode->subtrees[0];
-    if(factorNode->category != FACTOR_NODE) {
-        UnexpectedNodeCategoryError(FACTOR_NODE, factorNode->category);
-    }
-    TreeNodePtr multiplicativeOperationNode = termNode->subtrees[1];
-    if(multiplicativeOperationNode != NULL) {
-        SemanticError("Expected expression to be single factor, but it is an multiplicative operation");
-    }
-
-    TreeNodePtr variableNode = factorNode->subtrees[0];
-
-    if(variableNode->category == EXPRESSION_NODE) {
-        variableNode = getVariableExpression(variableNode);
-    }
-
-    if(variableNode->category != VARIABLE_NODE) {
-        UnexpectedNodeCategoryError(VARIABLE_NODE, variableNode->category);
-    }
-
-    return variableNode;
-}
-
 void processExpressionList(TreeNodePtr node, List* expectedParams) {
     TreeNodePtr currentNode = node;
     LinkedNode* paramNode = expectedParams->front;
@@ -881,6 +837,51 @@ void processExpressionList(TreeNodePtr node, List* expectedParams) {
         SemanticError("Too many parameters for function call");
     }
 }
+
+/* If the expression is not a single factor, then it is a semantic error */
+TreeNodePtr getVariableExpression(TreeNodePtr node) {
+    TreeNodePtr binaryOpExpressionNode = node->subtrees[0];
+    if(binaryOpExpressionNode->category != BINARY_OPERATOR_EXPRESSION_NODE) {
+        UnexpectedNodeCategoryError(BINARY_OPERATOR_EXPRESSION_NODE, binaryOpExpressionNode->category);
+    }
+
+    TreeNodePtr relationalOperatorNode = node->subtrees[1];
+    TreeNodePtr anotherBinaryIoExpression = node->subtrees[2];
+    if(relationalOperatorNode != NULL || anotherBinaryIoExpression != NULL) {
+        SemanticError("Expected expression to be single factor, but it is relational expression");
+    }
+
+    TreeNodePtr termNode = binaryOpExpressionNode->subtrees[0];
+    if(termNode->category != TERM_NODE) {
+        UnexpectedNodeCategoryError(TERM_NODE, termNode->category);
+    }
+    TreeNodePtr additiveOperationNode = binaryOpExpressionNode->subtrees[1];
+    if(additiveOperationNode != NULL) {
+        SemanticError("Expected expression to be single factor, but it is an additive operation");
+    }
+
+    TreeNodePtr factorNode = termNode->subtrees[0];
+    if(factorNode->category != FACTOR_NODE) {
+        UnexpectedNodeCategoryError(FACTOR_NODE, factorNode->category);
+    }
+    TreeNodePtr multiplicativeOperationNode = termNode->subtrees[1];
+    if(multiplicativeOperationNode != NULL) {
+        SemanticError("Expected expression to be single factor, but it is an multiplicative operation");
+    }
+
+    TreeNodePtr variableNode = factorNode->subtrees[0];
+
+    if(variableNode->category == EXPRESSION_NODE) {
+        variableNode = getVariableExpression(variableNode);
+    }
+
+    if(variableNode->category != VARIABLE_NODE) {
+        UnexpectedNodeCategoryError(VARIABLE_NODE, variableNode->category);
+    }
+
+    return variableNode;
+}
+
 
 // ...
 
