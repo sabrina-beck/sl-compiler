@@ -8,6 +8,12 @@
 #include <stdlib.h>
 #include <stdarg.h>
 
+typedef struct {
+    TypeDescriptorPtr type;
+    bool address;
+    bool array;
+} Variable, *VariablePtr;
+
 void processFunction(TreeNodePtr node, bool mainFunction);
 
 /* Function Header */
@@ -53,6 +59,9 @@ void processLabel(TreeNodePtr node);
 
 void processUnlabeledStatement(TreeNodePtr node);
 void processAssignment(TreeNodePtr node);
+VariablePtr processVariable(TreeNodePtr node);
+TypeDescriptorPtr processArrayIndexList(TreeNodePtr node, bool address, int level, int displacement, TypeDescriptorPtr variableTypeDescriptor);
+TypeDescriptorPtr processArrayIndex(TreeNodePtr node, TypeDescriptorPtr arrayTypeDescriptor);
 
 // ...
 void processConditional(TreeNodePtr node);
@@ -582,6 +591,106 @@ void processAssignment(TreeNodePtr node) {
     processExpression(expressionNode);
     // TODO processVariable
     // TODO STVl
+}
+
+// if it is an indexed array, the position address will be on top of the stack (exec time)
+VariablePtr processVariable(TreeNodePtr node) {
+    if(node->category != VARIABLE_NODE) {
+        UnexpectedNodeCategoryError(VARIABLE_NODE, node->category);
+    }
+
+    TreeNodePtr identifierNode = node->subtrees[0];
+    char* identifier = processIdentifier(identifierNode);
+    SymbolTableEntryPtr entry = findIdentifier(getSymbolTable(), identifier);
+
+    bool address;
+    int displacement;
+    TypeDescriptorPtr variableDeclarationType;
+    switch (entry->category) {
+        case VARIABLE_SYMBOL: {
+            address = false;
+            displacement = entry->description.variableDescriptor->displacement;
+            variableDeclarationType = entry->description.variableDescriptor->type;
+        }
+            break;
+        case PARAMETER_SYMBOL: {
+            ParameterPassage passage = entry->description.parameterDescriptor->parameterPassage;
+            switch (passage) {
+                case VALUE_PARAMETER:
+                    address = false;
+                    break;
+                case VARIABLE_PARAMETER:
+                    address = true;
+                    break;
+                default:
+                    SemanticError("Unexpected parameter passage type");
+            }
+            displacement = entry->description.parameterDescriptor->displacement;
+            variableDeclarationType = entry->description.parameterDescriptor->type;
+        }
+            break;
+        default:
+            SemanticError("Expected variable or parameter as variable"); // FIXME ambiguity
+    }
+
+    TreeNodePtr arrayIndexNode = node->subtrees[1];
+    TypeDescriptorPtr arrayPositionType = NULL;
+    if(entry->category == ARRAY_TYPE) {
+        arrayPositionType = processArrayIndexList(arrayIndexNode, address, entry->level, displacement, variableDeclarationType);
+    }
+    if(arrayIndexNode != NULL && variableDeclarationType->category != ARRAY_TYPE) {
+        SemanticError("Trying to index non array variable");
+    }
+
+    VariablePtr variable = malloc(sizeof(VariablePtr));
+
+    if(arrayPositionType != NULL) {
+        variable->type = arrayPositionType;
+        variable->array = true;
+    } else {
+        variable->type = variableDeclarationType;
+        variable->array = false;
+    }
+
+    variable->address = address;
+
+    return variable;
+}
+
+TypeDescriptorPtr processArrayIndexList(TreeNodePtr node, bool address, int level, int displacement, TypeDescriptorPtr variableTypeDescriptor) {
+    if(address) {
+        addCommand("LDVL %d, %d", level, displacement);
+    } else {
+        addCommand("LADR %d, %d", level, displacement);
+    }
+
+    TreeNodePtr currentIndexNode = node;
+    TypeDescriptorPtr currentType = variableTypeDescriptor;
+    while (node != NULL) {
+        currentType = processArrayIndex(currentIndexNode, currentType);
+        currentIndexNode = currentIndexNode->next;
+    }
+
+    return currentType;
+}
+
+TypeDescriptorPtr processArrayIndex(TreeNodePtr node, TypeDescriptorPtr arrayTypeDescriptor) {
+    if(node->category != ARRAY_INDEX_NODE) {
+        UnexpectedNodeCategoryError(ARRAY_INDEX_NODE, node->category);
+    }
+
+    if(arrayTypeDescriptor->category != ARRAY_TYPE) {
+        SemanticError("Expected array type to process array index");
+    }
+
+    TreeNodePtr expressionNode = node->subtrees[0];
+    TypeDescriptorPtr exprType = processExpression(expressionNode);
+    if(!equivalentTypes(exprType, getSymbolTable()->integerTypeDescriptor)) {
+        SemanticError("Index should be an integer");
+    }
+    addCommand("INDX %d", arrayTypeDescriptor->size);
+
+    return arrayTypeDescriptor->description.arrayDescriptor->elementType;
 }
 
 // ...
