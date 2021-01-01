@@ -69,7 +69,11 @@ TypeDescriptorPtr processArrayIndex(TreeNodePtr node, TypeDescriptorPtr arrayTyp
 TypeDescriptorPtr processFunctionCall(TreeNodePtr node);
 void processExpressionList(TreeNodePtr node, List* expectedParams);
 TreeNodePtr getVariableExpression(TreeNodePtr node);
+
+void processGoto(TreeNodePtr node);
+
 // ...
+
 void processConditional(TreeNodePtr node);
 void processRepetitive(TreeNodePtr node);
 
@@ -574,7 +578,7 @@ void processUnlabeledStatement(TreeNodePtr node) {
             processFunctionCall(node);
         break;
         case GOTO_NODE:
-            // TODO processGoto(node);
+            processGoto(node);
         break;
         case RETURN_NODE:
             // TODO processReturn(node);
@@ -884,6 +888,27 @@ TreeNodePtr getVariableExpression(TreeNodePtr node) {
     }
 
     return variableNode;
+}
+
+void processGoto(TreeNodePtr node) {
+    if(node->category != GOTO_NODE) {
+        UnexpectedNodeCategoryError(GOTO_NODE, node->category);
+    }
+
+    TreeNodePtr identifierNode = node->subtrees[0];
+    char* identifier = processIdentifier(identifierNode);
+
+    SymbolTableEntryPtr labelEntry = findIdentifier(getSymbolTable(), identifier);
+    if(labelEntry->category != LABEL_SYMBOL) {
+        SemanticError("Expected label identifier");
+    }
+
+    LabelDescriptorPtr labelDescriptor = labelEntry->description.labelDescriptor;
+    if(!labelDescriptor->defined) {
+        SemanticError("Use of undefined label");
+    }
+
+    addCommand("JUMP %s", labelDescriptor->mepaLabel);
 }
 
 // ...
