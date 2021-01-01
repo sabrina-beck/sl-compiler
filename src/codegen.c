@@ -12,6 +12,8 @@ typedef struct {
     TypeDescriptorPtr type;
     bool address;
     bool array;
+    int level;
+    int displacement;
 } Variable, *VariablePtr;
 
 void processFunction(TreeNodePtr node, bool mainFunction);
@@ -58,6 +60,7 @@ void processStatement(TreeNodePtr node);
 void processLabel(TreeNodePtr node);
 
 void processUnlabeledStatement(TreeNodePtr node);
+
 void processAssignment(TreeNodePtr node);
 VariablePtr processVariable(TreeNodePtr node);
 TypeDescriptorPtr processArrayIndexList(TreeNodePtr node, bool address, int level, int displacement, TypeDescriptorPtr variableTypeDescriptor);
@@ -588,9 +591,18 @@ void processAssignment(TreeNodePtr node) {
     TreeNodePtr variableNode = node->subtrees[0];
     TreeNodePtr expressionNode = node->subtrees[1];
 
-    processExpression(expressionNode);
-    // TODO processVariable
-    // TODO STVl
+    VariablePtr variable = processVariable(variableNode);
+    TypeDescriptorPtr exprType = processExpression(expressionNode);
+
+    if(variable->array) {
+        addCommand("STMV %d", variable->type->size);
+    } else {
+        if(variable->address) {
+            addCommand("STVI %d, %d", variable->level, variable->displacement);
+        } else {
+            addCommand("STVL %d, %d", variable->level, variable->displacement);
+        }
+    }
 }
 
 // if it is an indexed array, the position address will be on top of the stack (exec time)
@@ -653,6 +665,8 @@ VariablePtr processVariable(TreeNodePtr node) {
     }
 
     variable->address = address;
+    variable->level = entry->level;
+    variable->address = displacement;
 
     return variable;
 }
