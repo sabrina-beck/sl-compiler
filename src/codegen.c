@@ -80,8 +80,6 @@ void processRepetitive(TreeNodePtr node);
 void processCompound(TreeNodePtr node);
 void processUnlabeledStatementList(TreeNodePtr node);
 
-// ...
-
 TypeDescriptorPtr processExpression(TreeNodePtr node);
 TypeDescriptorPtr routeExpressionSubtree(TreeNodePtr node);
 TypeDescriptorPtr processBinaryOpExpression(TreeNodePtr node);
@@ -955,7 +953,10 @@ void processConditional(TreeNodePtr node) {
     char* elseLabel = nextMEPALabel();
     char* elseExitLabel = nextMEPALabel();
 
-    processExpression(conditionNode);
+    TypeDescriptorPtr expressionType = processExpression(conditionNode);
+    if(!equivalentTypes(expressionType, getSymbolTable()->booleanTypeDescriptor)) {
+        SemanticError("Expected boolean expression");
+    }
     addCommand("JUMPF %s", elseLabel);
 
     processCompound(ifCompound);
@@ -984,7 +985,10 @@ void processRepetitive(TreeNodePtr node) {
     char* exitLabel = nextMEPALabel(); // L2
 
     addCommand("%s: NOOP", conditionLabel);
-    processExpression(conditionNode);
+    TypeDescriptorPtr expressionType = processExpression(conditionNode);
+    if(!equivalentTypes(expressionType, getSymbolTable()->booleanTypeDescriptor)) {
+        SemanticError("Expected boolean expression");
+    }
     addCommand("JUMPF %s", exitLabel);
 
     processCompound(compoundNode);
@@ -1011,7 +1015,6 @@ void processUnlabeledStatementList(TreeNodePtr node) {
         current = current->next;
     }
 }
-// ...
 
 TypeDescriptorPtr processExpression(TreeNodePtr node) {
     if(node->category != EXPRESSION_NODE) {
