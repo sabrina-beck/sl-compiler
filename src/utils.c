@@ -96,8 +96,9 @@ SymbolTableEntryPtr newFunctionParameter(SymbolTableEntryPtr functionEntry, int 
     return newParameter(functionEntry->level, functionEntry->identifier, displacement, type, FUNCTION_PARAMETER);
 }
 
-SymbolTableEntryPtr newFunctionDescriptor(int level, char* identifier, TypeDescriptorPtr returnType, List* paramEntries) {
+SymbolTableEntryPtr newFunctionDescriptor(int level, char* identifier, char* mepaLabel, TypeDescriptorPtr returnType, List* paramEntries) {
     FunctionDescriptorPtr functionDescriptor = malloc(sizeof(FunctionDescriptor));
+    functionDescriptor->mepaLabel = mepaLabel;
     functionDescriptor->returnDisplacement = -paramEntries->size - 5; // FIXME explain
     functionDescriptor->returnType = returnType;
     functionDescriptor->params = paramEntries;

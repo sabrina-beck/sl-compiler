@@ -19,7 +19,7 @@ typedef struct {
 void processFunction(TreeNodePtr node, bool mainFunction);
 
 /* Function Header */
-SymbolTableEntryPtr processFunctionHeader(TreeNodePtr node);
+SymbolTableEntryPtr processFunctionHeader(TreeNodePtr node, char* mepaLabel);
 
 TypeDescriptorPtr processFunctionReturnType(TreeNodePtr node);
 
@@ -66,6 +66,9 @@ VariablePtr processVariable(TreeNodePtr node);
 TypeDescriptorPtr processArrayIndexList(TreeNodePtr node, bool address, int level, int displacement, TypeDescriptorPtr variableTypeDescriptor);
 TypeDescriptorPtr processArrayIndex(TreeNodePtr node, TypeDescriptorPtr arrayTypeDescriptor);
 
+void processFunctionCall(TreeNodePtr node);
+void processExpressionList(TreeNodePtr node, List* expectedParams);
+TreeNodePtr getVariableExpression(TreeNodePtr node);
 // ...
 void processConditional(TreeNodePtr node);
 void processRepetitive(TreeNodePtr node);
@@ -125,14 +128,15 @@ void processFunction(TreeNodePtr node, bool mainFunction) {
         UnexpectedNodeCategoryError(FUNCTION_NODE, node->category);
     }
 
+    char* mepaLabel = nextMEPALabel();
     if(mainFunction) {
         addCommand("MAIN");
     } else {
-        addCommand("ENFN %d", currentFunctionLevel);
+        addCommand("%s: ENFN %d", mepaLabel, currentFunctionLevel);
     }
 
     TreeNodePtr functionHeaderNode = node->subtrees[0];
-    SymbolTableEntryPtr functionSymbolTableEntry = processFunctionHeader(functionHeaderNode);
+    SymbolTableEntryPtr functionSymbolTableEntry = processFunctionHeader(functionHeaderNode, mepaLabel);
     addSymbolTableEntry(getSymbolTable(), functionSymbolTableEntry);
 
     TreeNodePtr blockNode = node->subtrees[1];
@@ -147,7 +151,7 @@ void processFunction(TreeNodePtr node, bool mainFunction) {
 
 /** Function Header **/
 
-SymbolTableEntryPtr processFunctionHeader(TreeNodePtr node) {
+SymbolTableEntryPtr processFunctionHeader(TreeNodePtr node, char* mepaLabel) {
     if(node->category != FUNCTION_HEADER_NODE) {
         UnexpectedNodeCategoryError(FUNCTION_HEADER_NODE, node->category);
     }
@@ -161,7 +165,7 @@ SymbolTableEntryPtr processFunctionHeader(TreeNodePtr node) {
     TreeNodePtr formalParametersNode = node->subtrees[2];
     List* parameters = processFormalParameterList(formalParametersNode);
 
-    return newFunctionDescriptor(currentFunctionLevel, identifier, returnType, parameters);
+    return newFunctionDescriptor(currentFunctionLevel, identifier, mepaLabel, returnType, parameters);
 }
 
 TypeDescriptorPtr processFunctionReturnType(TreeNodePtr node) {
@@ -250,11 +254,13 @@ SymbolTableEntryPtr processFunctionParameterDeclaration(TreeNodePtr node, int* d
     }
 
     TreeNodePtr functionHeaderNode = node->subtrees[0];
-    SymbolTableEntryPtr functionEntry = processFunctionHeader(functionHeaderNode);
+    SymbolTableEntryPtr functionEntry = processFunctionHeader(functionHeaderNode, NULL);
 
     SymbolTableEntryPtr functionParameterEntry = newFunctionParameter(functionEntry, *displacement);
     *displacement -= functionParameterEntry->description.parameterDescriptor->type->size;
 
+    free(functionEntry->description.functionDescriptor);
+    free(functionEntry);
     return functionParameterEntry;
 }
 
@@ -715,7 +721,166 @@ TypeDescriptorPtr processArrayIndex(TreeNodePtr node, TypeDescriptorPtr arrayTyp
     return arrayTypeDescriptor->description.arrayDescriptor->elementType;
 }
 
+void processFunctionCall(TreeNodePtr node) {
+    if(node->category != FUNCTION_CALL_NODE) {
+        UnexpectedNodeCategoryError(FUNCTION_CALL_NODE, node->category);
+    }
 
+    TreeNodePtr identifierNode = node->subtrees[0];
+    char* identifier = processIdentifier(identifierNode);
+    SymbolTableEntryPtr entry = findIdentifier(getSymbolTable(), identifier);
+
+    TreeNodePtr expressionListNode = node->subtrees[0];
+
+    switch (entry->category) {
+        case PARAMETER_SYMBOL: {
+            ParameterDescriptorPtr parameterDescriptor = entry->description.parameterDescriptor;
+            if (parameterDescriptor->type->category != FUNCTION_TYPE) {
+                SemanticError("Expected function as parameter");
+            }
+            List* expectedParameters = parameterDescriptor->type->description.functionTypeDescriptor->params;
+            processExpressionList(expressionListNode, expectedParameters);
+            addCommand("CPFN %d, %d, %d", entry->level, parameterDescriptor->displacement, currentFunctionLevel);
+        }
+            break;
+        case FUNCTION_SYMBOL: {
+            FunctionDescriptorPtr functionDescriptor = entry->description.functionDescriptor;
+
+            processExpressionList(expressionListNode, functionDescriptor->params);
+            addCommand("CFUN %s, %d", functionDescriptor->mepaLabel, currentFunctionLevel);
+        }
+            break;
+        default:
+            SemanticError("Expected function to perform function call");
+    }
+}
+
+/* If the expression is not a single factor, then it is a semantic error */
+TreeNodePtr getVariableExpression(TreeNodePtr node) {
+    TreeNodePtr binaryOpExpressionNode = node->subtrees[0];
+    if(binaryOpExpressionNode->category != BINARY_OPERATOR_EXPRESSION_NODE) {
+        UnexpectedNodeCategoryError(BINARY_OPERATOR_EXPRESSION_NODE, binaryOpExpressionNode->category);
+    }
+
+    TreeNodePtr relationalOperatorNode = node->subtrees[1];
+    TreeNodePtr anotherBinaryIoExpression = node->subtrees[2];
+    if(relationalOperatorNode != NULL || anotherBinaryIoExpression != NULL) {
+        SemanticError("Expected expression to be single factor, but it is relational expression");
+    }
+
+    TreeNodePtr termNode = binaryOpExpressionNode->subtrees[0];
+    if(termNode->category != TERM_NODE) {
+        UnexpectedNodeCategoryError(TERM_NODE, termNode->category);
+    }
+    TreeNodePtr additiveOperationNode = binaryOpExpressionNode->subtrees[1];
+    if(additiveOperationNode != NULL) {
+        SemanticError("Expected expression to be single factor, but it is an additive operation");
+    }
+
+    TreeNodePtr factorNode = termNode->subtrees[0];
+    if(factorNode->category != FACTOR_NODE) {
+        UnexpectedNodeCategoryError(FACTOR_NODE, factorNode->category);
+    }
+    TreeNodePtr multiplicativeOperationNode = termNode->subtrees[1];
+    if(multiplicativeOperationNode != NULL) {
+        SemanticError("Expected expression to be single factor, but it is an multiplicative operation");
+    }
+
+    TreeNodePtr variableNode = factorNode->subtrees[0];
+
+    if(variableNode->category == EXPRESSION_NODE) {
+        variableNode = getVariableExpression(variableNode);
+    }
+
+    if(variableNode->category != VARIABLE_NODE) {
+        UnexpectedNodeCategoryError(VARIABLE_NODE, variableNode->category);
+    }
+
+    return variableNode;
+}
+
+void processExpressionList(TreeNodePtr node, List* expectedParams) {
+    TreeNodePtr currentNode = node;
+    LinkedNode* paramNode = expectedParams->front;
+    while (paramNode != NULL) {
+
+        SymbolTableEntryPtr parameterEntry = (SymbolTableEntryPtr) paramNode->data;
+        ParameterDescriptorPtr parameterDescriptor = parameterEntry->description.parameterDescriptor;
+
+        switch (parameterDescriptor->parameterPassage) {
+            case VALUE_PARAMETER: {
+                TypeDescriptorPtr expressionType = processExpression(currentNode);
+
+                if(!equivalentTypes(parameterDescriptor->type, expressionType)) {
+                    SemanticError("Wrong parameter type on function");
+                }
+            }
+                break;
+            case VARIABLE_PARAMETER: {
+                TreeNodePtr variableNode = getVariableExpression(currentNode);
+                VariablePtr variablePtr = processVariable(variableNode);
+                if(variablePtr->array) {
+                    // process variable already left the address on top of the stack
+                } else {
+                    if(variablePtr->address) {
+                        addCommand("LDVL %d, %d", variablePtr->level, variablePtr->displacement);
+                    } else {
+                        addCommand("LADR %d, %d", variablePtr->level, variablePtr->displacement);
+                    }
+                }
+            }
+                break;
+            case FUNCTION_PARAMETER: {
+                TreeNodePtr variableNode = getVariableExpression(currentNode);
+                TreeNodePtr identifierNode = variableNode->subtrees[0];
+                char* identifier = processIdentifier(identifierNode);
+                SymbolTableEntryPtr variableEntry = findIdentifier(getSymbolTable(), identifier);
+                switch (variableEntry->category) {
+                    case FUNCTION_SYMBOL: {
+                        FunctionDescriptorPtr functionDescriptor = variableEntry->description.functionDescriptor;
+                        addCommand("LGAD %s, %d", functionDescriptor->mepaLabel, variableEntry->level - 1);
+                    }
+                        break;
+                    case PARAMETER_SYMBOL: {
+                        ParameterDescriptorPtr parameterDescriptor = variableEntry->description.parameterDescriptor;
+                        TypeDescriptorPtr parameterType = parameterDescriptor->type;
+                        if (parameterType->category != FUNCTION_TYPE) {
+                            SemanticError("Expected function as parameter");
+                        }
+                        // generalized address is already on the stack
+                        // load the MEPA address
+                        addCommand("LDVL %s, %d", variableEntry->level, parameterDescriptor->displacement);
+                        // load the value of the base register D[k]
+                        addCommand("LDVL %s, %d", variableEntry->level, parameterDescriptor->displacement + 1);
+                        // load the level k
+                        addCommand("LDVL %s, %d", variableEntry->level, parameterDescriptor->displacement + 2);
+                    }
+                        break;
+                    default:
+                        SemanticError("Expected function as parameter");
+                }
+
+                TreeNodePtr arrayIndexNode = variableNode->subtrees[1];
+                if(arrayIndexNode != NULL) {
+                    SemanticError("Trying to index function identifier");
+                }
+
+            }
+                break;
+        }
+
+        paramNode = paramNode->next;
+        currentNode = currentNode->next;
+    }
+
+    if(paramNode->next != NULL) {
+        SemanticError("Missing parameters for function call");
+    }
+
+    if(currentNode->next != NULL) {
+        SemanticError("Too many parameters for function call");
+    }
+}
 
 // ...
 
