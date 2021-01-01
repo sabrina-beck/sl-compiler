@@ -66,7 +66,7 @@ VariablePtr processVariable(TreeNodePtr node);
 TypeDescriptorPtr processArrayIndexList(TreeNodePtr node, bool address, int level, int displacement, TypeDescriptorPtr variableTypeDescriptor);
 TypeDescriptorPtr processArrayIndex(TreeNodePtr node, TypeDescriptorPtr arrayTypeDescriptor);
 
-void processFunctionCall(TreeNodePtr node);
+TypeDescriptorPtr processFunctionCall(TreeNodePtr node);
 void processExpressionList(TreeNodePtr node, List* expectedParams);
 TreeNodePtr getVariableExpression(TreeNodePtr node);
 // ...
@@ -571,7 +571,7 @@ void processUnlabeledStatement(TreeNodePtr node) {
             processAssignment(node);
         break;
         case FUNCTION_CALL_NODE:
-            // TODO processFunctionCall(node);
+            processFunctionCall(node);
         break;
         case GOTO_NODE:
             // TODO processGoto(node);
@@ -721,33 +721,37 @@ TypeDescriptorPtr processArrayIndex(TreeNodePtr node, TypeDescriptorPtr arrayTyp
     return arrayTypeDescriptor->description.arrayDescriptor->elementType;
 }
 
-void processFunctionCall(TreeNodePtr node) {
+TypeDescriptorPtr processFunctionCall(TreeNodePtr node) {
     if(node->category != FUNCTION_CALL_NODE) {
         UnexpectedNodeCategoryError(FUNCTION_CALL_NODE, node->category);
     }
 
     TreeNodePtr identifierNode = node->subtrees[0];
     char* identifier = processIdentifier(identifierNode);
-    SymbolTableEntryPtr entry = findIdentifier(getSymbolTable(), identifier);
+    SymbolTableEntryPtr functionEntry = findIdentifier(getSymbolTable(), identifier);
 
     TreeNodePtr expressionListNode = node->subtrees[0];
 
-    switch (entry->category) {
+    switch (functionEntry->category) {
         case PARAMETER_SYMBOL: {
-            ParameterDescriptorPtr parameterDescriptor = entry->description.parameterDescriptor;
+            ParameterDescriptorPtr parameterDescriptor = functionEntry->description.parameterDescriptor;
             if (parameterDescriptor->type->category != FUNCTION_TYPE) {
                 SemanticError("Expected function as parameter");
             }
             List* expectedParameters = parameterDescriptor->type->description.functionTypeDescriptor->params;
             processExpressionList(expressionListNode, expectedParameters);
-            addCommand("CPFN %d, %d, %d", entry->level, parameterDescriptor->displacement, currentFunctionLevel);
+            addCommand("CPFN %d, %d, %d", functionEntry->level, parameterDescriptor->displacement, currentFunctionLevel);
+
+            return parameterDescriptor->type->description.functionTypeDescriptor->returnType;
         }
             break;
         case FUNCTION_SYMBOL: {
-            FunctionDescriptorPtr functionDescriptor = entry->description.functionDescriptor;
+            FunctionDescriptorPtr functionDescriptor = functionEntry->description.functionDescriptor;
 
             processExpressionList(expressionListNode, functionDescriptor->params);
             addCommand("CFUN %s, %d", functionDescriptor->mepaLabel, currentFunctionLevel);
+
+            return functionDescriptor->returnType;
         }
             break;
         default:
@@ -881,7 +885,6 @@ TreeNodePtr getVariableExpression(TreeNodePtr node) {
 
     return variableNode;
 }
-
 
 // ...
 
@@ -1110,10 +1113,10 @@ TypeDescriptorPtr processFactor(TreeNodePtr node) {
         UnexpectedNodeCategoryError(FACTOR_NODE, node->category);
     }
 
-    TreeNodePtr specificFactor = node->subtrees[0];
-    switch (specificFactor->category) {
+    TreeNodePtr specificFactorNode = node->subtrees[0];
+    switch (specificFactorNode->category) {
         case VARIABLE_NODE: {
-            VariablePtr variable = processVariable(specificFactor);
+            VariablePtr variable = processVariable(specificFactorNode);
             if (variable->array) {
                 addCommand("LDMV %d", variable->type->size);
             } else {
@@ -1126,17 +1129,22 @@ TypeDescriptorPtr processFactor(TreeNodePtr node) {
             return variable->type;
         }
         case INTEGER_NODE: {
-            int integer = processInteger(specificFactor);
+            int integer = processInteger(specificFactorNode);
             addCommand("LDCT %d", integer);
             return getSymbolTable()->integerTypeDescriptor;
         }
-        case FUNCTION_CALL_NODE:
-            //TODO return processFunctionCall();
+        case FUNCTION_CALL_NODE: {
+            TypeDescriptorPtr functionReturnType = processFunctionCall(specificFactorNode);
+            if (functionReturnType == NULL) {
+                SemanticError("Void function used in expression");
+            }
+            return functionReturnType;
+        }
             break;
         case EXPRESSION_NODE:
             return processExpression(node);
         default:
-            UnexpectedChildNodeCategoryError(FACTOR_NODE, specificFactor->category);
+            UnexpectedChildNodeCategoryError(FACTOR_NODE, specificFactorNode->category);
     }
 }
 
