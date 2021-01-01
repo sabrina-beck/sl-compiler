@@ -35,7 +35,7 @@ void processVariableDeclaration(TreeNodePtr node, int* displacement);
 
 void processFunctions(TreeNodePtr node);
 
-// ...
+/* Identifier & Type */
 Stack* processIdentifiersAsStack(TreeNodePtr node);
 Queue* processIdentifiersAsQueue(TreeNodePtr node);
 TypeDescriptorPtr processTypeIdentifier(TreeNodePtr node);
@@ -43,7 +43,13 @@ char* processIdentifier(TreeNodePtr node);
 
 TypeDescriptorPtr processType(TreeNodePtr node);
 int processArraySizeDeclaration(TreeNodePtr node);
-// ...
+
+/* Body */
+void processBody(TreeNodePtr node);
+
+void processStatement(TreeNodePtr node);
+
+void processLabel(TreeNodePtr node);
 
 void processUnlabeledStatement(TreeNodePtr node);
 void processAssignment(TreeNodePtr node);
@@ -377,7 +383,7 @@ void processFunctions(TreeNodePtr node) {
     }
 }
 
-// ...
+/* Identifier & Type */
 
 Stack* processIdentifiersAsStack(TreeNodePtr node) {
     Stack * identifiers = newStack();
@@ -453,7 +459,65 @@ int processArraySizeDeclaration(TreeNodePtr node) {
     return processInteger(integerNode);
 }
 
-// ...
+/* Body */
+
+void processBody(TreeNodePtr node) {
+    if(node->category != BODY_NODE) {
+        UnexpectedNodeCategoryError(BODY_NODE, node->category);
+    }
+
+    TreeNodePtr statementNode = node->subtrees[0];
+    while (statementNode != NULL) {
+        processStatement(statementNode);
+        statementNode = statementNode->next;
+    }
+}
+
+void processStatement(TreeNodePtr node) {
+    if(node->category != STATEMENT_NODE) {
+        UnexpectedNodeCategoryError(STATEMENT_NODE, node->category);
+    }
+
+    TreeNodePtr firstChild = node->subtrees[0];
+    if(firstChild->category != LABEL_NODE) {
+        processUnlabeledStatement(firstChild);
+        return;
+    }
+
+    processLabel(firstChild);
+
+    TreeNodePtr unlabeledStatamentNode = node->subtrees[1];
+    processUnlabeledStatement(unlabeledStatamentNode);
+
+}
+
+void processLabel(TreeNodePtr node) {
+    if(node == NULL) {
+        return;
+    }
+
+    if(node->category != LABEL_NODE) {
+        UnexpectedNodeCategoryError(LABEL_NODE, node->category);
+    }
+
+    TreeNodePtr identifierNode = node->subtrees[0];
+    char* identifier = processIdentifier(identifierNode);
+
+    SymbolTableEntryPtr symbolTableEntry = findIdentifier(getSymbolTable(), identifier);
+    if(symbolTableEntry == NULL) {
+        SemanticError("Label not declared");
+    }
+
+    if(symbolTableEntry->category != LABEL_SYMBOL) {
+        SemanticError("Identifier used as label, but it isn't a label");
+    }
+
+    if(symbolTableEntry->description.labelDescriptor->defined) {
+        SemanticError("Label already used");
+    }
+
+    symbolTableEntry->description.labelDescriptor->defined = true;
+}
 
 void processUnlabeledStatement(TreeNodePtr node) {
     if(node == NULL) { // treats empty statement
