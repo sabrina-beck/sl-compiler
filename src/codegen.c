@@ -42,7 +42,7 @@ TypeDescriptorPtr processTypeIdentifier(TreeNodePtr node);
 char* processIdentifier(TreeNodePtr node);
 
 TypeDescriptorPtr processType(TreeNodePtr node);
-int processArraySizeDeclaration(TreeNodePtr node);
+TypeDescriptorPtr processArraySizeDeclaration(TreeNodePtr node, TypeDescriptorPtr elementType);
 
 /* Body */
 void processBody(TreeNodePtr node);
@@ -437,16 +437,25 @@ TypeDescriptorPtr processType(TreeNodePtr node) {
 
     TreeNodePtr identifierNode = node->subtrees[0];
     char* identifier = processIdentifier(identifierNode);
+    SymbolTableEntryPtr entry = findIdentifier(getSymbolTable(), identifier);
 
-    TreeNodePtr arraySizeDeclarationNode = node->subtrees[1];
-    int arrayDimension = 0;
-    while (arraySizeDeclarationNode != NULL) {
-        arrayDimension += processArraySizeDeclaration(arraySizeDeclarationNode);
-        arraySizeDeclarationNode = arraySizeDeclarationNode->next;
+    if(entry->category != TYPE_SYMBOL) {
+        SemanticError("Expected type identifier");
     }
+
+    TypeDescriptorPtr elementType = entry->description.typeDescriptor;
+
+    TreeNodePtr arraySizeNodes = node->subtrees[1];
+    TypeDescriptorPtr arrayType = processArraySizeDeclaration(arraySizeNodes, elementType);
+
+    if(arrayType != NULL) {
+        return arrayType;
+    }
+
+    return elementType;
 }
 
-int processArraySizeDeclaration(TreeNodePtr node) {
+TypeDescriptorPtr processArraySizeDeclaration(TreeNodePtr node, TypeDescriptorPtr elementType) {
     if(node == NULL) {
         return 0;
     }
@@ -455,8 +464,19 @@ int processArraySizeDeclaration(TreeNodePtr node) {
         UnexpectedNodeCategoryError(ARRAY_SIZE_NODE, node->category);
     }
 
+    TypeDescriptorPtr subArrayType = processArraySizeDeclaration(node->next, elementType);
+
     TreeNodePtr integerNode = node->subtrees[0];
-    return processInteger(integerNode);
+    int dimension = processInteger(integerNode);
+
+    TypeDescriptorPtr currentElementType = subArrayType;
+    if(subArrayType == NULL) {
+        currentElementType = elementType;
+    }
+
+    int size = dimension * currentElementType->size;
+
+    return newArrayType(size, dimension, currentElementType);
 }
 
 /* Body */

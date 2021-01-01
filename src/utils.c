@@ -149,6 +149,19 @@ SymbolTableEntryPtr newVariable(int level, char* identifier, int displacement, T
     return symbol;
 }
 
+TypeDescriptorPtr newArrayType(int size, int dimension, TypeDescriptorPtr elementType) {
+    ArrayDescriptorPtr arrayDescriptor = malloc(sizeof(ArrayDescriptor));
+    arrayDescriptor->dimension = dimension;
+    arrayDescriptor->elementType = elementType;
+
+    TypeDescriptorPtr typeDescriptor = malloc(sizeof(TypeDescriptorPtr));
+    typeDescriptor->category = ARRAY_TYPE;
+    typeDescriptor->size = size;
+
+    return typeDescriptor;
+
+}
+
 void addSymbolTableEntry(SymbolTablePtr symbolTable, SymbolTableEntryPtr entry) {
     push(symbolTable->stack, entry);
 
