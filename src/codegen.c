@@ -118,7 +118,7 @@ void processFunction(TreeNodePtr node, bool mainFunction) {
     addSymbolTableEntry(getSymbolTable(), functionSymbolTableEntry);
 
     TreeNodePtr blockNode = node->subtrees[1];
-    // TODO processBlock()
+    processBlock(blockNode);
 
     if(mainFunction) {
         addCommand("STOP");
