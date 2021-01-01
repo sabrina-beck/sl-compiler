@@ -594,6 +594,10 @@ void processAssignment(TreeNodePtr node) {
     VariablePtr variable = processVariable(variableNode);
     TypeDescriptorPtr exprType = processExpression(expressionNode);
 
+    if(!equivalentTypes(exprType, variable->type)) {
+        SemanticError("Trying to assign value to variable of incompatible type");
+    }
+
     if(variable->array) {
         addCommand("STMV %d", variable->type->size);
     } else {
