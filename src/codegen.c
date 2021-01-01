@@ -53,11 +53,11 @@ TypeDescriptorPtr processType(TreeNodePtr node);
 TypeDescriptorPtr processArraySizeDeclaration(TreeNodePtr node, TypeDescriptorPtr elementType);
 
 /* Body */
-void processBody(TreeNodePtr node);
+void processBody(TreeNodePtr node, int allocatedSizeForVariables);
 
-void processStatement(TreeNodePtr node);
+void processStatement(TreeNodePtr node, int allocatedSizeForVariables);
 
-void processLabel(TreeNodePtr node);
+void processLabel(TreeNodePtr node, int allocatedSizeForVariables);
 
 void processUnlabeledStatement(TreeNodePtr node);
 
@@ -272,19 +272,19 @@ void processBlock(TreeNodePtr node) {
     processTypes(typesNode);
 
     TreeNodePtr variablesNode = node->subtrees[2];
-    int summedVarsSize = processVariables(variablesNode);
-    if(summedVarsSize > 0) {
-        addCommand("ALOC %d", summedVarsSize);
+    int allocatedSizeForVariables = processVariables(variablesNode);
+    if(allocatedSizeForVariables > 0) {
+        addCommand("ALOC %d", allocatedSizeForVariables);
     }
 
     TreeNodePtr functionsNode = node->subtrees[3];
     processFunctions(functionsNode);
 
     TreeNodePtr bodyNode = node->subtrees[4];
-    // TODO
+    processBody(bodyNode, allocatedSizeForVariables);
 
-    if(summedVarsSize > 0) {
-        addCommand("DLOC %d", summedVarsSize);
+    if(allocatedSizeForVariables > 0) {
+        addCommand("DLOC %d", allocatedSizeForVariables);
     }
 }
 
@@ -349,7 +349,6 @@ int processVariables(TreeNodePtr node) {
 
     TreeNodePtr variableDeclarationNode = node->subtrees[0];
     int displacement = 0;
-    int count = 0;
     while (variableDeclarationNode != NULL) {
         processVariableDeclaration(variableDeclarationNode, &displacement);
         variableDeclarationNode = variableDeclarationNode->next;
@@ -493,19 +492,19 @@ TypeDescriptorPtr processArraySizeDeclaration(TreeNodePtr node, TypeDescriptorPt
 
 /* Body */
 
-void processBody(TreeNodePtr node) {
+void processBody(TreeNodePtr node, int allocatedSizeForVariables) {
     if(node->category != BODY_NODE) {
         UnexpectedNodeCategoryError(BODY_NODE, node->category);
     }
 
     TreeNodePtr statementNode = node->subtrees[0];
     while (statementNode != NULL) {
-        processStatement(statementNode);
+        processStatement(statementNode, allocatedSizeForVariables);
         statementNode = statementNode->next;
     }
 }
 
-void processStatement(TreeNodePtr node) {
+void processStatement(TreeNodePtr node, int allocatedSizeForVariables) {
     if(node->category != STATEMENT_NODE) {
         UnexpectedNodeCategoryError(STATEMENT_NODE, node->category);
     }
@@ -516,14 +515,14 @@ void processStatement(TreeNodePtr node) {
         return;
     }
 
-    processLabel(firstChild);
+    processLabel(firstChild, allocatedSizeForVariables);
 
     TreeNodePtr unlabeledStatamentNode = node->subtrees[1];
     processUnlabeledStatement(unlabeledStatamentNode);
 
 }
 
-void processLabel(TreeNodePtr node) {
+void processLabel(TreeNodePtr node, int allocatedSizeForVariables) {
     if(node == NULL) {
         return;
     }
@@ -548,7 +547,12 @@ void processLabel(TreeNodePtr node) {
         SemanticError("Label already used");
     }
 
-    symbolTableEntry->description.labelDescriptor->defined = true;
+    LabelDescriptorPtr labelDescriptor = symbolTableEntry->description.labelDescriptor;
+    labelDescriptor->defined = true;
+
+    // since there are only statements at this level, the current activation record displacement on the stack
+    // will always be equal to the size of its alocated variables
+    addCommand("ENLB %s, %d", labelDescriptor->mepaLabel, allocatedSizeForVariables);
 }
 
 void processUnlabeledStatement(TreeNodePtr node) {
@@ -710,6 +714,8 @@ TypeDescriptorPtr processArrayIndex(TreeNodePtr node, TypeDescriptorPtr arrayTyp
 
     return arrayTypeDescriptor->description.arrayDescriptor->elementType;
 }
+
+
 
 // ...
 
