@@ -5,6 +5,7 @@
 #include "datastructures.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdarg.h>
 
 void processFunction(TreeNodePtr node, bool mainFunction);
@@ -22,11 +23,25 @@ List* processParameterDeclaration(TreeNodePtr node, ParameterPassage passage, in
 SymbolTableEntryPtr processFunctionParameterDeclaration(TreeNodePtr node, int* displacement);
 
 /* Block */
+void processBlock(TreeNodePtr node);
+
+void processLabels(TreeNodePtr node);
+
+void processTypes(TreeNodePtr node);
+void processTypeDeclaration(TreeNodePtr node);
+
+void processVariables(TreeNodePtr node);
+void processVariableDeclaration(TreeNodePtr node, int* displacement);
+
 
 // ...
-Stack* processIdentifierList(TreeNodePtr node);
+Stack* processIdentifiersAsStack(TreeNodePtr node);
+Queue* processIdentifiersAsQueue(TreeNodePtr node);
 TypeDescriptorPtr processTypeIdentifier(TreeNodePtr node);
 char* processIdentifier(TreeNodePtr node);
+
+TypeDescriptorPtr processType(TreeNodePtr node);
+int processArraySizeDeclaration(TreeNodePtr node);
 // ...
 
 void processUnlabeledStatement(TreeNodePtr node);
@@ -49,7 +64,7 @@ TypeDescriptorPtr processAdditiveOperation(TreeNodePtr node);
 TypeDescriptorPtr processTerm(TreeNodePtr node);
 TypeDescriptorPtr processMultiplicativeOperation(TreeNodePtr node);
 TypeDescriptorPtr processFactor(TreeNodePtr node);
-TypeDescriptorPtr processInteger(TreeNodePtr node);
+int processInteger(TreeNodePtr node);
 TypeDescriptorPtr processRelationalOperator(TreeNodePtr node);
 TypeDescriptorPtr processAdditiveOperator(TreeNodePtr node);
 TypeDescriptorPtr processUnaryOperator(TreeNodePtr node);
@@ -111,6 +126,8 @@ void processFunction(TreeNodePtr node, bool mainFunction) {
     }
 }
 
+/** Function Header **/
+
 SymbolTableEntryPtr processFunctionHeader(TreeNodePtr node) {
     if(node->category != FUNCTION_HEADER_NODE) {
         UnexpectedNodeCategoryError(FUNCTION_HEADER_NODE, node->category);
@@ -167,6 +184,8 @@ List* processFormalParameter(TreeNodePtr node, int* displacement) {
 
     params = concat(params, nextParams);
     free(nextParams);
+
+    return params;
 }
 
 List* processParameterByReferenceDeclaration(TreeNodePtr node, int* displacement) {
@@ -187,7 +206,7 @@ List* processParameterByValueDeclaration(TreeNodePtr node, int* displacement) {
 
 List* processParameterDeclaration(TreeNodePtr node, ParameterPassage passage, int* displacement) {
     TreeNodePtr parameterIdentifierNode = node->subtrees[0];
-    Stack* identifiers = processIdentifierList(node);
+    Stack* identifiers = processIdentifiersAsStack(node);
 
     TreeNodePtr typeIdentifierNode = node->subtrees[1];
     TypeDescriptorPtr type = processTypeIdentifier(typeIdentifierNode);
@@ -220,15 +239,135 @@ SymbolTableEntryPtr processFunctionParameterDeclaration(TreeNodePtr node, int* d
     return functionParameterEntry;
 }
 
+/** Block **/
+
+void processBlock(TreeNodePtr node) {
+    if(node->category != BLOCK_NODE) {
+        UnexpectedNodeCategoryError(BLOCK_NODE, node->category);
+    }
+
+    TreeNodePtr labelsNode = node->subtrees[0];
+    processLabels(labelsNode);
+    TreeNodePtr typesNode = node->subtrees[1];
+    processTypes(typesNode);
+    TreeNodePtr variablesNode = node->subtrees[2];
+    // TODO
+    TreeNodePtr functionsNode = node->subtrees[3];
+    // TODO
+    TreeNodePtr bodyNode = node->subtrees[4];
+    // TODO
+}
+
+void processLabels(TreeNodePtr node) {
+    if(node == NULL) {
+        return;
+    }
+
+    if(node->category != LABELS_NODE) {
+        UnexpectedNodeCategoryError(LABELS_NODE, node->category);
+    }
+
+    TreeNodePtr identifiersNode = node->subtrees[0];
+    Queue* identifiers = processIdentifiersAsQueue(identifiersNode);
+    while (identifiers->front != NULL) {
+        char* identifier = (char*) dequeue(identifiers);
+        SymbolTableEntryPtr labelEntry = newLabel(currentFunctionLevel, identifier);
+        addSymbolTableEntry(getSymbolTable(), labelEntry);
+    }
+    free(identifiers);
+}
+
+void processTypes(TreeNodePtr node) {
+    if(node == NULL) {
+        return;
+    }
+
+    if(node->category != TYPES_NODE) {
+        UnexpectedNodeCategoryError(TYPES_NODE, node->category);
+    }
+
+    TreeNodePtr typeDeclarationNode = node->subtrees[0];
+    while (typeDeclarationNode != NULL) {
+        processTypeDeclaration(typeDeclarationNode);
+        typeDeclarationNode = typeDeclarationNode->next;
+    }
+}
+
+void processTypeDeclaration(TreeNodePtr node) {
+    if(node->category != TYPE_DECLARATION_NODE) {
+        UnexpectedNodeCategoryError(TYPE_DECLARATION_NODE, node->category);
+    }
+
+    TreeNodePtr identifierNode = node->subtrees[0];
+    char* identifier = processIdentifier(identifierNode);
+
+    TreeNodePtr typeNode = node->subtrees[1];
+    TypeDescriptorPtr type = processType(typeNode);
+
+    SymbolTableEntryPtr typeEntry = newType(currentFunctionLevel, identifier, type);
+    addSymbolTableEntry(getSymbolTable(), typeEntry);
+}
+
+void processVariables(TreeNodePtr node) {
+    if(node == NULL) {
+        return;
+    }
+
+    if(node->category != VARIABLES_NODE) {
+        UnexpectedNodeCategoryError(VARIABLES_NODE, node->category);
+    }
+
+    TreeNodePtr variableDeclarationNode = node->subtrees[0];
+    int displacement = 0;
+    while (variableDeclarationNode != NULL) {
+        processVariableDeclaration(variableDeclarationNode, &displacement);
+        variableDeclarationNode = variableDeclarationNode->next;
+    }
+}
+
+void processVariableDeclaration(TreeNodePtr node, int* displacement) {
+    if(node->category != DECLARATION_NODE) {
+        UnexpectedNodeCategoryError(DECLARATION_NODE, node->category);
+    }
+
+    TreeNodePtr identifiersNode = node->subtrees[0];
+    Queue* identifiers = processIdentifiersAsQueue(identifiersNode);
+
+    TreeNodePtr typeNode = node->subtrees[1];
+    TypeDescriptorPtr type = processType(typeNode);
+
+    while (identifiers->front != NULL) {
+        char* identifier = dequeue(identifiers);
+        SymbolTableEntryPtr variableEntry = newVariable(currentFunctionLevel, identifier, *displacement, type);
+        addSymbolTableEntry(getSymbolTable(), variableEntry);
+        *displacement += type->size;
+    }
+
+    free(identifiers);
+}
+
 // ...
 
-Stack* processIdentifierList(TreeNodePtr node) {
+Stack* processIdentifiersAsStack(TreeNodePtr node) {
     Stack * identifiers = newStack();
 
     TreeNodePtr current = node;
     while (current != NULL) {
         char* identifier = processIdentifier(current);
         push(identifiers, identifier);
+        current = current->next;
+    }
+
+    return identifiers;
+}
+
+Queue* processIdentifiersAsQueue(TreeNodePtr node) {
+    Queue* identifiers = newQueue();
+
+    TreeNodePtr current = node;
+    while (current != NULL) {
+        char* identifier = processIdentifier(current);
+        enqueue(identifiers, identifier);
         current = current->next;
     }
 
@@ -252,6 +391,35 @@ char* processIdentifier(TreeNodePtr node) {
         UnexpectedNodeCategoryError(IDENTIFIER_NODE, node->category);
     }
     return node->name;
+}
+
+TypeDescriptorPtr processType(TreeNodePtr node) {
+    if(node->category != TYPE_NODE) {
+        UnexpectedNodeCategoryError(TYPE_NODE, node->category);
+    }
+
+    TreeNodePtr identifierNode = node->subtrees[0];
+    char* identifier = processIdentifier(identifierNode);
+
+    TreeNodePtr arraySizeDeclarationNode = node->subtrees[1];
+    int arrayDimension = 0;
+    while (arraySizeDeclarationNode != NULL) {
+        arrayDimension += processArraySizeDeclaration(arraySizeDeclarationNode);
+        arraySizeDeclarationNode = arraySizeDeclarationNode->next;
+    }
+}
+
+int processArraySizeDeclaration(TreeNodePtr node) {
+    if(node == NULL) {
+        return 0;
+    }
+
+    if(node->category != ARRAY_SIZE_NODE) {
+        UnexpectedNodeCategoryError(ARRAY_SIZE_NODE, node->category);
+    }
+
+    TreeNodePtr integerNode = node->subtrees[0];
+    return processInteger(integerNode);
 }
 
 // ...
@@ -534,8 +702,11 @@ TypeDescriptorPtr processFactor(TreeNodePtr node) {
             //TODO return processVariable();
             //TODO LDVL
             break;
-        case INTEGER_NODE:
-            return processInteger(specificFactor);
+        case INTEGER_NODE: {
+            int integer = processInteger(specificFactor);
+            addCommand("LDCT %d", integer);
+            return getSymbolTable()->integerTypeDescriptor;
+        }
         case FUNCTION_CALL_NODE:
             //TODO return processFunctionCall();
             break;
@@ -547,15 +718,20 @@ TypeDescriptorPtr processFactor(TreeNodePtr node) {
 }
 
 
-TypeDescriptorPtr processInteger(TreeNodePtr node) {
+int processInteger(TreeNodePtr node) {
     if(node->category != INTEGER_NODE) {
         UnexpectedNodeCategoryError(INTEGER_NODE, node->category);
     }
 
-    char* integer = node->name;
-    addCommand("LDCT %s", integer);
+    char* integerStr = node->name;
 
-    return getSymbolTable()->integerTypeDescriptor;
+    char* end;
+    int integer = strtol(integerStr, &end, 10);
+    if(end != NULL && *end != '\0') {
+        SemanticError("Integer that it isn't an integer");
+    }
+
+    return integer;
 }
 
 

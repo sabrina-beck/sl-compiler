@@ -5,7 +5,6 @@
 
 /** Symbol table auxiliary functions **/
 TypeDescriptorPtr newPredefinedTypeDescriptor(int size, PredefinedType predefinedType);
-SymbolTableEntryPtr newType(int level, char* identifier, TypeDescriptorPtr typeDescriptor);
 SymbolTableEntryPtr newConstant(int level, char* identifier, int value, TypeDescriptorPtr typeDescriptor);
 SymbolTableEntryPtr newPseudoFunction(int level, char* identifier, PseudoFunction pseudoFunction);
 
@@ -112,6 +111,44 @@ SymbolTableEntryPtr newFunctionDescriptor(int level, char* identifier, TypeDescr
     return symbol;
 }
 
+SymbolTableEntryPtr newLabel(int level, char* identifier) {
+    LabelDescriptorPtr labelDescriptor = malloc(sizeof(LabelDescriptor));
+    labelDescriptor->mepaLabel = nextMEPALabel();
+    labelDescriptor->defined = false;
+
+    SymbolTableEntryPtr symbol = malloc(sizeof(SymbolTableEntry));
+    symbol->category = LABEL_SYMBOL;
+    symbol->level = level;
+    symbol->identifier = identifier;
+    symbol->description.labelDescriptor = labelDescriptor;
+
+    return symbol;
+}
+
+
+SymbolTableEntryPtr newType(int level, char* identifier, TypeDescriptorPtr typeDescriptor) {
+    SymbolTableEntryPtr symbol = malloc(sizeof(SymbolTableEntry));
+    symbol->category = TYPE_SYMBOL;
+    symbol->level = level;
+    symbol->identifier = identifier;
+    symbol->description.typeDescriptor = typeDescriptor;
+    return symbol;
+}
+
+SymbolTableEntryPtr newVariable(int level, char* identifier, int displacement, TypeDescriptorPtr typeDescriptor) {
+    VariableDescriptorPtr variableDescriptor = malloc(sizeof(VariableDescriptor));
+    variableDescriptor->displacement = displacement;
+    variableDescriptor->type = typeDescriptor;
+
+    SymbolTableEntryPtr symbol = malloc(sizeof(SymbolTableEntry));
+    symbol->category = VARIABLE_SYMBOL;
+    symbol->level = level;
+    symbol->identifier = identifier;
+    symbol->description.variableDescriptor = variableDescriptor;
+
+    return symbol;
+}
+
 void addSymbolTableEntry(SymbolTablePtr symbolTable, SymbolTableEntryPtr entry) {
     push(symbolTable->stack, entry);
 
@@ -155,15 +192,6 @@ TypeDescriptorPtr newPredefinedTypeDescriptor(int size, PredefinedType predefine
     predefinedTypeDescriptor->size = size;
     predefinedTypeDescriptor->description.predefinedType = predefinedType;
     return predefinedTypeDescriptor;
-}
-
-SymbolTableEntryPtr newType(int level, char* identifier, TypeDescriptorPtr typeDescriptor) {
-    SymbolTableEntryPtr symbol = malloc(sizeof(SymbolTableEntry));
-    symbol->category = TYPE_SYMBOL;
-    symbol->level = level;
-    symbol->identifier = identifier;
-    symbol->description.typeDescriptor = typeDescriptor;
-    return symbol;
 }
 
 SymbolTableEntryPtr newConstant(int level, char* identifier, int value, TypeDescriptorPtr typeDescriptor) {
