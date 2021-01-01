@@ -120,8 +120,7 @@ SymbolTableEntryPtr newType(int level, char* identifier, TypeDescriptorPtr typeD
 SymbolTableEntryPtr newVariable(int level, char* identifier, int displacement, TypeDescriptorPtr typeDescriptor);
 TypeDescriptorPtr newArrayType(int size, int dimension, TypeDescriptorPtr elementType);
 void addSymbolTableEntry(SymbolTablePtr symbolTable, SymbolTableEntryPtr entry);
-
-
+void changeToLevelScope(SymbolTablePtr symbolTablePtr, int level);
 
 int parametersTotalSize(SymbolTableEntryPtr entry); // entry of category FUNCTION_SYMBOL
 

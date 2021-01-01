@@ -193,6 +193,28 @@ void addSymbolTableEntry(SymbolTablePtr symbolTable, SymbolTableEntryPtr entry) 
     }
 }
 
+void changeToLevelScope(SymbolTablePtr symbolTablePtr, int level) {
+    Stack* auxStack = newStack();
+
+    SymbolTableEntryPtr lastPoped = pop(symbolTablePtr->stack);
+    while (lastPoped->level > level) {
+        lastPoped = pop(symbolTablePtr->stack);
+        if (lastPoped->category == FUNCTION_SYMBOL) {
+            if(lastPoped->level == level + 1) {
+                push(auxStack, lastPoped);
+            }
+        }
+    }
+    push(symbolTablePtr->stack, lastPoped);
+
+    // pushing back the functions at level+1 that are still accessible
+    while (auxStack->top != NULL) {
+        SymbolTableEntryPtr poped = pop(auxStack);
+        push(symbolTablePtr->stack, poped);
+    }
+    free(auxStack);
+}
+
 int parametersTotalSize(SymbolTableEntryPtr entry) {
     if (entry->category != FUNCTION_SYMBOL) {
         fprintf(stderr, "Expected function entry!");

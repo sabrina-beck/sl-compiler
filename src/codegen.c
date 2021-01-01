@@ -110,7 +110,7 @@ SymbolTablePtr getSymbolTable();
 /**
  * Function Level
  **/
-int currentFunctionLevel = 0;
+int currentFunctionLevel = -1;
 
 /**
  * Implementations
@@ -130,6 +130,8 @@ void processFunction(TreeNodePtr node, bool mainFunction) {
         UnexpectedNodeCategoryError(FUNCTION_NODE, node->category);
     }
 
+    currentFunctionLevel++;
+
     char* mepaLabel = nextMEPALabel();
     if(mainFunction) {
         addCommand("MAIN");
@@ -139,7 +141,11 @@ void processFunction(TreeNodePtr node, bool mainFunction) {
 
     TreeNodePtr functionHeaderNode = node->subtrees[0];
     SymbolTableEntryPtr functionSymbolTableEntry = processFunctionHeader(functionHeaderNode, mepaLabel);
-    addSymbolTableEntry(getSymbolTable(), functionSymbolTableEntry);
+    if(!mainFunction) {
+        addSymbolTableEntry(getSymbolTable(), functionSymbolTableEntry);
+    } else {
+        free(functionSymbolTableEntry); // TODO create cascade free on utils for any kind
+    }
 
     TreeNodePtr blockNode = node->subtrees[1];
     processBlock(blockNode);
@@ -149,6 +155,9 @@ void processFunction(TreeNodePtr node, bool mainFunction) {
     } else {
         addCommand("RTRN %d", parametersTotalSize(functionSymbolTableEntry));
     }
+
+    currentFunctionLevel--;
+    changeToLevelScope(getSymbolTable(), currentFunctionLevel);
 }
 
 /** Function Header **/
