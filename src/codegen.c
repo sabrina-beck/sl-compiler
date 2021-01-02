@@ -1166,36 +1166,13 @@ TypeDescriptorPtr processFactor(TreeNodePtr node) {
     TreeNodePtr specificFactorNode = node->subtrees[0];
     switch (specificFactorNode->category) {
         case VALUE_NODE: {
-            Value value = processValue(specificFactorNode);
-            switch (value.category) {
-                case ARRAY_VALUE:
-                case ARRAY_REFERENCE:
-                    addCommand("      LDMV   %d", value.type->size);
-                    break;
-                case REFERENCE:
-                    addCommand("      LVLI   %d, %d", value.level, value.content.displacement);
-                    break;
-                case VALUE:
-                    addCommand("      LDVL   %d,%d", value.level, value.content.displacement);
-                    break;
-                case CONSTANT: {
-                    addCommand("      LDCT   %d", value.content.value);
-                }
-                    break;
-            }
-            return value.type;
+            return processValueFactor(specificFactorNode);
         }
         case INTEGER_NODE: {
-            int integer = processInteger(specificFactorNode);
-            addCommand("      LDCT   %d", integer);
-            return getSymbolTable()->integerTypeDescriptor;
+            return processIntegerFactor(specificFactorNode);
         }
         case FUNCTION_CALL_NODE: {
-            TypeDescriptorPtr functionReturnType = processFunctionCall(specificFactorNode);
-            if (functionReturnType == NULL) {
-                SemanticError("Void function used in expression");
-            }
-            return functionReturnType;
+            return processFunctionCallFactor(specificFactorNode);
         }
         case EXPRESSION_NODE:
             return processExpression(specificFactorNode);
@@ -1204,6 +1181,40 @@ TypeDescriptorPtr processFactor(TreeNodePtr node) {
     }
 }
 
+TypeDescriptorPtr processValueFactor(TreeNodePtr node) {
+    Value value = processValue(node);
+    switch (value.category) {
+        case ARRAY_VALUE:
+        case ARRAY_REFERENCE:
+            addCommand("      LDMV   %d", value.type->size);
+            break;
+        case REFERENCE:
+            addCommand("      LVLI   %d, %d", value.level, value.content.displacement);
+            break;
+        case VALUE:
+            addCommand("      LDVL   %d,%d", value.level, value.content.displacement);
+            break;
+        case CONSTANT: {
+            addCommand("      LDCT   %d", value.content.value);
+        }
+            break;
+    }
+    return value.type;
+}
+
+TypeDescriptorPtr processIntegerFactor(TreeNodePtr node) {
+    int integer = processInteger(node);
+    addCommand("      LDCT   %d", integer);
+    return getSymbolTable()->integerTypeDescriptor;
+}
+
+TypeDescriptorPtr processFunctionCallFactor(TreeNodePtr node) {
+    TypeDescriptorPtr functionReturnType = processFunctionCall(node);
+    if (functionReturnType == NULL) {
+        SemanticError("Void function used in expression");
+    }
+    return functionReturnType;
+}
 
 int processInteger(TreeNodePtr node) {
     if(node->category != INTEGER_NODE) {
