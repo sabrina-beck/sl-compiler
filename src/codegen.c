@@ -95,6 +95,7 @@ TypeDescriptorPtr processUnaryOperator(TreeNodePtr node);
 TypeDescriptorPtr processMultiplicativeOperator(TreeNodePtr node);
 
 /** Error Handling **/
+void UnexpectedSymbolEntryCategoryError(SymbolTableCategory expected, SymbolTableCategory gotten);
 void UnexpectedNodeCategoryError(NodeCategory expected, NodeCategory gotten);
 void UnexpectedChildNodeCategoryError(NodeCategory fatherNodeCategory, NodeCategory childNodeCategory);
 
@@ -117,7 +118,6 @@ int currentFunctionLevel = -1;
  **/
 void processProgram(void *p) {
     TreeNodePtr treeRoot = (TreeNodePtr) p;
-
     processFunction(treeRoot, true);
 
     addCommand("END ");
@@ -126,6 +126,7 @@ void processProgram(void *p) {
 }
 
 void processFunction(TreeNodePtr node, bool mainFunction) {
+
     if(node->category != FUNCTION_NODE) {
         UnexpectedNodeCategoryError(FUNCTION_NODE, node->category);
     }
@@ -240,7 +241,7 @@ List* processParameterByValueDeclaration(TreeNodePtr node, int* displacement) {
 
 List* processParameterDeclaration(TreeNodePtr node, ParameterPassage passage, int* displacement) {
     TreeNodePtr parameterIdentifierNode = node->subtrees[0];
-    Stack* identifiers = processIdentifiersAsStack(node);
+    Stack* identifiers = processIdentifiersAsStack(parameterIdentifierNode);
 
     TreeNodePtr typeIdentifierNode = node->subtrees[1];
     TypeDescriptorPtr type = processTypeIdentifier(typeIdentifierNode);
@@ -291,7 +292,7 @@ void processBlock(TreeNodePtr node) {
     TreeNodePtr variablesNode = node->subtrees[2];
     int allocatedSizeForVariables = processVariables(variablesNode);
     if(allocatedSizeForVariables > 0) {
-        addCommand("ALOC %d", allocatedSizeForVariables);
+        addCommand("ALOC   %d", allocatedSizeForVariables);
     }
 
     TreeNodePtr functionsNode = node->subtrees[3];
@@ -301,7 +302,7 @@ void processBlock(TreeNodePtr node) {
     processBody(bodyNode, allocatedSizeForVariables);
 
     if(allocatedSizeForVariables > 0) {
-        addCommand("DLOC %d", allocatedSizeForVariables);
+        addCommand("DLOC   %d", allocatedSizeForVariables);
     }
 }
 
@@ -446,7 +447,7 @@ TypeDescriptorPtr processTypeIdentifier(TreeNodePtr node) {
     SymbolTableEntryPtr entry = findIdentifier(symbolTable, identifier);
 
     if(entry->category != TYPE_SYMBOL) {
-        SemanticError("Expected identifier to be a type but it wasn't");
+        UnexpectedSymbolEntryCategoryError(TYPE_SYMBOL, entry->category);
     }
     return entry->description.typeDescriptor;
 }
@@ -468,7 +469,7 @@ TypeDescriptorPtr processType(TreeNodePtr node) {
     SymbolTableEntryPtr entry = findIdentifier(getSymbolTable(), identifier);
 
     if(entry->category != TYPE_SYMBOL) {
-        SemanticError("Expected type identifier");
+        UnexpectedSymbolEntryCategoryError(TYPE_SYMBOL, entry->category);
     }
 
     TypeDescriptorPtr elementType = entry->description.typeDescriptor;
@@ -557,7 +558,7 @@ void processLabel(TreeNodePtr node, int allocatedSizeForVariables) {
     }
 
     if(symbolTableEntry->category != LABEL_SYMBOL) {
-        SemanticError("Identifier used as label, but it isn't a label");
+        UnexpectedSymbolEntryCategoryError(LABEL_SYMBOL, symbolTableEntry->category);
     }
 
     if(symbolTableEntry->description.labelDescriptor->defined) {
@@ -922,7 +923,7 @@ void processGoto(TreeNodePtr node) {
 
     SymbolTableEntryPtr labelEntry = findIdentifier(getSymbolTable(), identifier);
     if(labelEntry->category != LABEL_SYMBOL) {
-        SemanticError("Expected label identifier");
+        UnexpectedSymbolEntryCategoryError(LABEL_SYMBOL, labelEntry->category);
     }
 
     LabelDescriptorPtr labelDescriptor = labelEntry->description.labelDescriptor;
@@ -1344,6 +1345,12 @@ TypeDescriptorPtr processMultiplicativeOperator(TreeNodePtr node) {
 }
 
 /** Semantic Errors handling functions **/
+
+void UnexpectedSymbolEntryCategoryError(SymbolTableCategory expected, SymbolTableCategory gotten) {
+    char message[100];
+    sprintf(message, "Expected %s, but got %s", getSymbolTableCategoryName(expected), getSymbolTableCategoryName(gotten));
+    SemanticError(message);
+}
 
 void UnexpectedNodeCategoryError(NodeCategory expected, NodeCategory gotten) {
     char message[50];

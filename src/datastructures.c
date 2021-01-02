@@ -76,6 +76,7 @@ void* find(Stack* stack, void* secondParam, bool (*predicate)(void*, void*)) {
         if(predicate(data, secondParam)) {
             return data;
         }
+        current = current->next;
     }
 
     return NULL;

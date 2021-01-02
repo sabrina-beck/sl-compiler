@@ -56,7 +56,10 @@ SymbolTablePtr initializeSymbolTable() {
 bool byIdentifierPredicate(void* data, void* secondParam) {
     SymbolTableEntryPtr entry = (SymbolTableEntryPtr) data;
     char* identifier = (char*) secondParam;
-    return strcmp(identifier, entry->identifier);
+    if(strcmp(identifier, entry->identifier) == 0) {
+        return true;
+    }
+    return false;
 }
 
 SymbolTableEntryPtr findIdentifier(SymbolTablePtr symbolTable, char* identifier) {
@@ -117,7 +120,11 @@ SymbolTableEntryPtr newFunctionDescriptor(int level, char* identifier, char* mep
     FunctionDescriptorPtr functionDescriptor = malloc(sizeof(FunctionDescriptor));
     functionDescriptor->mepaLabel = mepaLabel;
     functionDescriptor->returnLabel = nextMEPALabel();
-    functionDescriptor->returnDisplacement = -paramEntries->size - 5; // FIXME explain
+    if(paramEntries == NULL) {
+        functionDescriptor->returnDisplacement = -5;
+    } else {
+        functionDescriptor->returnDisplacement = -paramEntries->size - 5; // FIXME explain
+    }
     functionDescriptor->returnType = returnType;
     functionDescriptor->params = paramEntries;
 
@@ -199,13 +206,13 @@ void changeToLevelScope(SymbolTablePtr symbolTablePtr, int level) {
     Stack* auxStack = newStack();
 
     SymbolTableEntryPtr lastPoped = pop(symbolTablePtr->stack);
-    while (lastPoped->level > level) {
-        lastPoped = pop(symbolTablePtr->stack);
+    while (lastPoped != NULL && lastPoped->level > level) {
         if (lastPoped->category == FUNCTION_SYMBOL) {
             if(lastPoped->level == level + 1) {
                 push(auxStack, lastPoped);
             }
         }
+        lastPoped = pop(symbolTablePtr->stack);
     }
     push(symbolTablePtr->stack, lastPoped);
 
@@ -352,4 +359,24 @@ int countDigits(int number) {
     } while (number != 0);
 
     return count;
+}
+
+/* Debug */
+char* getSymbolTableCategoryName(SymbolTableCategory category) {
+    switch (category) {
+        case TYPE_SYMBOL:
+            return "TYPE_SYMBOL";
+        case CONSTANT_SYMBOL:
+            return "CONSTANT_SYMBOL";
+        case VARIABLE_SYMBOL:
+            return "VARIABLE_SYMBOL";
+        case PARAMETER_SYMBOL:
+            return "PARAMETER_SYMBOL";
+        case PSEUDO_FUNCTION_SYMBOL:
+            return "PSEUDO_FUNCTION_SYMBOL";
+        case FUNCTION_SYMBOL:
+            return "FUNCTION_SYMBOL";
+        case LABEL_SYMBOL:
+            return "LABEL_SYMBOL";
+    }
 }

@@ -129,3 +129,6 @@ bool equivalentFunctions(TypeDescriptorPtr functionType, FunctionDescriptorPtr f
 
 char* nextMEPALabel();
 
+
+/* Debug */
+char* getSymbolTableCategoryName(SymbolTableCategory category);
