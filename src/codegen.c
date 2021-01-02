@@ -49,12 +49,14 @@ void processFunction(TreeNodePtr node) {
     FunctionHeaderPtr functionHeader = processFunctionHeader(node->subtrees[0]);
     SymbolTableEntryPtr entry = addFunction(getSymbolTable(), functionHeader);
 
-    addCommand("%s:   ENFN   %d",
+    addCommand("%s:   ENFN   %d         %s",
                entry->description.functionDescriptor->mepaLabel,
-               entry->level);
+               entry->level,
+               entry->identifier);
     processBlock(node->subtrees[1]);
 
-    addCommand("      RTRN   %d", entry->description.functionDescriptor->parametersSize);
+    addCommand("%s:   NOOP             ", entry->description.functionDescriptor->returnLabel);
+    addCommand("      RTRN   %d        end function", entry->description.functionDescriptor->parametersSize);
 
     endFunctionLevel(getSymbolTable());
 }
@@ -179,12 +181,24 @@ void processBlock(TreeNodePtr node) {
     processVariables(node->subtrees[2]);
 
     FunctionDescriptorPtr functionDescriptor = findCurrentFunctionDescriptor(getSymbolTable());
+
     if(functionDescriptor->variablesDisplacement > 0) {
         addCommand("      ALOC   %d", functionDescriptor->variablesDisplacement);
     }
 
-    processFunctions(node->subtrees[3]);
+    TreeNodePtr functionsNode = node->subtrees[3];
+    if(functionsNode != NULL) {
+        if(functionDescriptor->mepaLabel == NULL) { // generate Main functions label only if necessary
+            functionDescriptor->mepaLabel = nextMEPALabel();
+        }
+        addCommand("      JUMP   %s", functionDescriptor->mepaLabel);
+    }
+    processFunctions(functionsNode);
 
+
+    if(functionsNode != NULL) {
+        addCommand("%s:   NOOP             body", functionDescriptor->mepaLabel);
+    }
     processBody(node->subtrees[4]);
 
     if(functionDescriptor->variablesDisplacement > 0) {
@@ -833,17 +847,17 @@ TreeNodePtr getVariableExpression(TreeNodePtr node) {
         SemanticError("Expected expression to be single factor, but it is an multiplicative operation");
     }
 
-    TreeNodePtr variableNode = factorNode->subtrees[0];
+    TreeNodePtr valueNode = factorNode->subtrees[0];
 
-    if(variableNode->category == EXPRESSION_NODE) {
-        variableNode = getVariableExpression(variableNode);
+    if(valueNode->category == EXPRESSION_NODE) {
+        valueNode = getVariableExpression(valueNode);
     }
 
-    if(variableNode->category != VALUE_NODE) {
-        UnexpectedNodeCategoryError(VALUE_NODE, variableNode->category);
+    if(valueNode->category != VALUE_NODE) {
+        UnexpectedNodeCategoryError(VALUE_NODE, valueNode->category);
     }
 
-    return variableNode;
+    return valueNode;
 }
 
 void processGoto(TreeNodePtr node) {
@@ -851,17 +865,16 @@ void processGoto(TreeNodePtr node) {
         UnexpectedNodeCategoryError(GOTO_NODE, node->category);
     }
 
-    TreeNodePtr identifierNode = node->subtrees[0];
-    char* identifier = processIdentifier(identifierNode);
+    char* identifier = processIdentifier(node->subtrees[0]);
 
     SymbolTableEntryPtr labelEntry = findIdentifier(getSymbolTable(), identifier);
     if(labelEntry->category != LABEL_SYMBOL) {
         UnexpectedSymbolEntryCategoryError(LABEL_SYMBOL, labelEntry->category);
     }
 
-    LabelDescriptorPtr labelDescriptor = labelEntry->description.labelDescriptor;
-
-    addCommand("      JUMP   %s         goto %s", labelDescriptor->mepaLabel, identifier);
+    addCommand("      JUMP   %s         goto %s",
+               labelEntry->description.labelDescriptor->mepaLabel,
+               identifier);
 }
 
 void processReturn(TreeNodePtr node) {
