@@ -21,7 +21,7 @@ for testFile in tests/sl/*; do
   inputFile="tests/input/data$testNumber.in"
 
   ./build/main < $testFile > $resultProgram
-  ./build/mepa/mepa.py --silent --limit 12000 --progfile $resultProgram < $inputFile > $resultFile
+  #./build/mepa/mepa.py --silent --limit 12000 --progfile $resultProgram < $inputFile > $resultFile
 
   DIFF=$(diff $resultProgram $expectedResponsePath)
 #  DIFF=$(diff $resultFile $expectedResponsePath)

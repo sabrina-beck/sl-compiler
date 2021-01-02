@@ -577,7 +577,7 @@ void processLabel(TreeNodePtr node, int allocatedSizeForVariables) {
 
     // since there are only statements at this level, the current activation record displacement on the stack
     // will always be equal to the size of its alocated variables
-    addCommand("%s:   ENLB   %d,%d", labelDescriptor->mepaLabel, symbolTableEntry->level, allocatedSizeForVariables);
+    addCommand("%s:   ENLB   %d,%d        %s:", labelDescriptor->mepaLabel, symbolTableEntry->level, allocatedSizeForVariables, identifier);
 }
 
 void processUnlabeledStatement(TreeNodePtr node) {
@@ -988,7 +988,7 @@ void processGoto(TreeNodePtr node) {
 
     LabelDescriptorPtr labelDescriptor = labelEntry->description.labelDescriptor;
 
-    addCommand("      JUMP   %s", labelDescriptor->mepaLabel);
+    addCommand("      JUMP   %s         goto %s", labelDescriptor->mepaLabel, identifier);
 }
 
 void processReturn(TreeNodePtr node) {
@@ -1039,19 +1039,19 @@ void processConditional(TreeNodePtr node) {
     if(!equivalentTypes(expressionType, getSymbolTable()->booleanTypeDescriptor)) {
         SemanticError("Expected boolean expression");
     }
-    addCommand("      JMPF   %s", elseLabel);
+    addCommand("      JMPF   %s        if", elseLabel);
 
     processCompound(ifCompound);
 
     if(elseCompound != NULL) {
         addCommand("      JUMP   %s", elseExitLabel);
 
-        addCommand("%s:   NOOP", elseLabel);
+        addCommand("%s:   NOOP             else", elseLabel);
         processCompound(elseCompound);
 
-        addCommand("%s:   NOOP", elseExitLabel);
+        addCommand("%s:   NOOP             end if", elseExitLabel);
     } else {
-        addCommand("%s:   NOOP", elseLabel);
+        addCommand("%s:   NOOP             end if", elseLabel);
     }
 }
 
@@ -1066,7 +1066,7 @@ void processRepetitive(TreeNodePtr node) {
     char* conditionLabel = nextMEPALabel(); // L1
     char* exitLabel = nextMEPALabel(); // L2
 
-    addCommand("%s:   NOOP", conditionLabel);
+    addCommand("%s:   NOOP             while", conditionLabel);
     TypeDescriptorPtr expressionType = processExpression(conditionNode);
     if(!equivalentTypes(expressionType, getSymbolTable()->booleanTypeDescriptor)) {
         SemanticError("Expected boolean expression");
@@ -1076,7 +1076,7 @@ void processRepetitive(TreeNodePtr node) {
     processCompound(compoundNode);
     addCommand("      JUMP   %s", conditionLabel);
 
-    addCommand("%s:   NOOP", exitLabel);
+    addCommand("%s:   NOOP             end while", exitLabel);
 
 }
 
