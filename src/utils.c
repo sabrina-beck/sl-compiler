@@ -204,6 +204,9 @@ ParameterDescriptorsListPtr addParameterEntries(SymbolTablePtr symbolTable, Para
     ParameterPtr currentParameter = parameters;
     while(currentDescriptor != NULL && currentParameter != NULL) {
         addParameter(symbolTable, currentParameter->name, currentDescriptor->descriptor);
+
+        currentDescriptor = currentDescriptor->next;
+        currentParameter = currentParameter->next;
     }
 
     return parameterDescriptors;
