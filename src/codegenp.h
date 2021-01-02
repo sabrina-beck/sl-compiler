@@ -64,7 +64,7 @@ TypeDescriptorPtr processRegularFunctionCall(TreeNodePtr node, SymbolTableEntryP
 TypeDescriptorPtr processPseudoFunctionCall(TreeNodePtr node, SymbolTableEntryPtr functionEntry);
 void processReadFunctionCall(TreeNodePtr argumentNode);
 void processWriteFunctionCall(TreeNodePtr argumentNode);
-void processExpressionListAsParameters(TreeNodePtr node, List* expectedParams);
+void processArgumentsList(TreeNodePtr node, List* expectedParams);
 TreeNodePtr getVariableExpression(TreeNodePtr node);
 
 void processGoto(TreeNodePtr node);

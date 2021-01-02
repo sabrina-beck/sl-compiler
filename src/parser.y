@@ -186,10 +186,10 @@ array_index                 : OPEN_BRACKET expression CLOSE_BRACKET { addTreeNod
 
 function_call_statement     : function_call SEMI_COLON
                             ;
-function_call               : identifier OPEN_PAREN expression_list CLOSE_PAREN { addTreeNode(FUNCTION_CALL_NODE, 2); }
-expression_list             : { addEmpty(); }
+function_call               : identifier OPEN_PAREN arguments_list CLOSE_PAREN { addTreeNode(FUNCTION_CALL_NODE, 2); }
+arguments_list              : { addEmpty(); }
                             | expression
-                            | expression COMMA expression_list { addSequence(); }
+                            | expression COMMA arguments_list { addSequence(); }
                             ;
 
 goto                        : GOTO identifier SEMI_COLON { addTreeNode(GOTO_NODE, 1); }

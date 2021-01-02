@@ -596,7 +596,7 @@ TypeDescriptorPtr processFunctionParameterCall(TreeNodePtr node, SymbolTableEntr
     }
 
     List* expectedParameters = parameterDescriptor->type->description.functionTypeDescriptor->params;
-    processExpressionListAsParameters(node->subtrees[1], expectedParameters);
+    processArgumentsList(node->subtrees[1], expectedParameters);
 
     addCommand("      CPFN   %d,%d,%d",
                functionEntry->level,
@@ -609,7 +609,7 @@ TypeDescriptorPtr processFunctionParameterCall(TreeNodePtr node, SymbolTableEntr
 TypeDescriptorPtr processRegularFunctionCall(TreeNodePtr node, SymbolTableEntryPtr functionEntry) {
     FunctionDescriptorPtr functionDescriptor = functionEntry->description.functionDescriptor;
 
-    processExpressionListAsParameters(node->subtrees[1], functionDescriptor->params);
+    processArgumentsList(node->subtrees[1], functionDescriptor->params);
     addCommand("      CFUN   %s,%d", functionDescriptor->mepaLabel, getFunctionLevel());
 
     return functionDescriptor->returnType;
@@ -676,7 +676,7 @@ void processWriteFunctionCall(TreeNodePtr argumentNode) {
     processWriteFunctionCall(argumentNode->next);
 }
 
-void processExpressionListAsParameters(TreeNodePtr node, List* expectedParams) {
+void processArgumentsList(TreeNodePtr node, List* expectedParams) {
     TreeNodePtr currentNode = node;
     LinkedNode* paramNode = expectedParams->front;
     while (paramNode != NULL) {
