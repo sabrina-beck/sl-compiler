@@ -78,6 +78,7 @@ TreeNodePtr getVariableExpression(TreeNodePtr node);
 void processGoto(TreeNodePtr node);
 
 void processReturn(TreeNodePtr node);
+void processReturnWithValue(TreeNodePtr expressionNode, FunctionDescriptorPtr functionDescriptor);
 
 void processConditional(TreeNodePtr node);
 void processRepetitive(TreeNodePtr node);

@@ -889,23 +889,27 @@ void processReturn(TreeNodePtr node) {
 
     TreeNodePtr expressionNode = node->subtrees[0];
     if(expressionNode != NULL && functionDescriptor->returnType != NULL) {
-        TypeDescriptorPtr expressionType = processExpression(expressionNode);
-        if (!equivalentTypes(expressionType, functionDescriptor->returnType)) {
-            SemanticError("Expression with type different than function return type");
-        }
-
-        if(expressionType->size == 1) {
-            addCommand("      STVL   %d,%d", getFunctionLevel(), functionDescriptor->returnDisplacement);
-            addCommand("      JUMP   %s", functionDescriptor->returnLabel);
-        } else {
-            SemanticError("Can't return multiple values"); // TODO check if this is correct
-        }
+        processReturnWithValue(expressionNode, functionDescriptor);
     } else if (expressionNode == NULL && functionDescriptor->returnType == NULL) {
         addCommand("      JUMP   %s", functionDescriptor->returnLabel);
     } else if(functionDescriptor->returnType == NULL) {
         SemanticError("Can't return value for void function");
     } else if(expressionNode == NULL) {
         SemanticError("Missing return value for function");
+    }
+}
+
+void processReturnWithValue(TreeNodePtr expressionNode, FunctionDescriptorPtr functionDescriptor) {
+    TypeDescriptorPtr expressionType = processExpression(expressionNode);
+    if (!equivalentTypes(expressionType, functionDescriptor->returnType)) {
+        SemanticError("Expression with type different than function return type");
+    }
+
+    if(expressionType->size == 1) {
+        addCommand("      STVL   %d,%d", getFunctionLevel(), functionDescriptor->returnDisplacement);
+        addCommand("      JUMP   %s", functionDescriptor->returnLabel);
+    } else {
+        SemanticError("Can't return multiple values"); // TODO check if this is correct
     }
 }
 
