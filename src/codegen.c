@@ -571,71 +571,109 @@ TypeDescriptorPtr processFunctionCall(TreeNodePtr node) {
         UnexpectedNodeCategoryError(FUNCTION_CALL_NODE, node->category);
     }
 
-    TreeNodePtr identifierNode = node->subtrees[0];
-    char* identifier = processIdentifier(identifierNode);
+    char* identifier = processIdentifier(node->subtrees[0]);
     SymbolTableEntryPtr functionEntry = findIdentifier(getSymbolTable(), identifier);
-
-    TreeNodePtr expressionListNode = node->subtrees[1];
 
     switch (functionEntry->category) {
         case PARAMETER_SYMBOL: {
-            ParameterDescriptorPtr parameterDescriptor = functionEntry->description.parameterDescriptor;
-            if (parameterDescriptor->type->category != FUNCTION_TYPE) {
-                SemanticError("Expected function as parameter");
-            }
-            List* expectedParameters = parameterDescriptor->type->description.functionTypeDescriptor->params;
-            processExpressionListAsParameters(expressionListNode, expectedParameters);
-            addCommand("      CPFN   %d,%d,%d", functionEntry->level, parameterDescriptor->displacement, getFunctionLevel());
-
-            return parameterDescriptor->type->description.functionTypeDescriptor->returnType;
+            return processFunctionParameterCall(node, functionEntry);
         }
         case FUNCTION_SYMBOL: {
-            FunctionDescriptorPtr functionDescriptor = functionEntry->description.functionDescriptor;
-
-            processExpressionListAsParameters(expressionListNode, functionDescriptor->params);
-            addCommand("      CFUN   %s,%d", functionDescriptor->mepaLabel, getFunctionLevel());
-
-            return functionDescriptor->returnType;
+            return processRegularFunctionCall(node, functionEntry);
         }
         case PSEUDO_FUNCTION_SYMBOL: {
-            TreeNodePtr currentExpr = expressionListNode;
-            while (currentExpr != NULL) {
-                switch (functionEntry->description.pseudoFunction) {
-                    case READ: {
-                        addCommand("      READ");
-                        TreeNodePtr variableNode = getVariableExpression(currentExpr);
-                        Value value = processValue(variableNode);
-                        switch (value.category) {
-                            case ARRAY_VALUE:
-                            case ARRAY_REFERENCE:
-                                addCommand("      STMV   1");
-                                break;
-                            case REFERENCE:
-                                addCommand("      STVI   %d,%d", value.level, value.content.displacement);
-                                break;
-                            case VALUE:
-                                addCommand("      STVL   %d,%d", value.level, value.content.displacement);
-                                break;
-                            case CONSTANT:
-                                SemanticError("Can't read boolean value");
-                                break;
-                        }
-                    }
-                        break;
-                    case WRITE: {
-                        processExpression(currentExpr);
-                        addCommand("      PRNT");
-                    }
-                        break;
-                }
-                currentExpr = currentExpr->next;
-            }
-
-            return NULL;
+            return processPseudoFunctionCall(node, functionEntry);
         }
         default:
             SymbolEntryCategoryError("function call", functionEntry->category);
     }
+}
+
+TypeDescriptorPtr processFunctionParameterCall(TreeNodePtr node, SymbolTableEntryPtr functionEntry) {
+    ParameterDescriptorPtr parameterDescriptor = functionEntry->description.parameterDescriptor;
+    if (parameterDescriptor->type->category != FUNCTION_TYPE) {
+        SemanticError("Expected function as parameter");
+    }
+
+    List* expectedParameters = parameterDescriptor->type->description.functionTypeDescriptor->params;
+    processExpressionListAsParameters(node->subtrees[1], expectedParameters);
+
+    addCommand("      CPFN   %d,%d,%d",
+               functionEntry->level,
+               parameterDescriptor->displacement,
+               getFunctionLevel());
+
+    return parameterDescriptor->type->description.functionTypeDescriptor->returnType;
+}
+
+TypeDescriptorPtr processRegularFunctionCall(TreeNodePtr node, SymbolTableEntryPtr functionEntry) {
+    FunctionDescriptorPtr functionDescriptor = functionEntry->description.functionDescriptor;
+
+    processExpressionListAsParameters(node->subtrees[1], functionDescriptor->params);
+    addCommand("      CFUN   %s,%d", functionDescriptor->mepaLabel, getFunctionLevel());
+
+    return functionDescriptor->returnType;
+}
+
+TypeDescriptorPtr processPseudoFunctionCall(TreeNodePtr node, SymbolTableEntryPtr functionEntry) {
+    TreeNodePtr argumentNode = node->subtrees[1];
+
+    switch (functionEntry->description.pseudoFunction) {
+        case READ: {
+            processReadFunctionCall(argumentNode);
+            break;
+        }
+        case WRITE: {
+            processWriteFunctionCall(argumentNode);
+            break;
+        }
+    }
+
+    return NULL;
+}
+
+void processReadFunctionCall(TreeNodePtr argumentNode) {
+    if(argumentNode == NULL) {
+        return;
+    }
+
+    addCommand("      READ");
+
+    TreeNodePtr valueNode = getVariableExpression(argumentNode);
+    Value value = processValue(valueNode);
+
+    if(value.type->size > 1) {
+        SemanticError("Can't read multiple values at a time");
+    }
+
+    switch (value.category) {
+        case ARRAY_VALUE:
+        case ARRAY_REFERENCE:
+            addCommand("      STMV   1");
+            break;
+        case REFERENCE:
+            addCommand("      STVI   %d,%d", value.level, value.content.displacement);
+            break;
+        case VALUE:
+            addCommand("      STVL   %d,%d", value.level, value.content.displacement);
+            break;
+        case CONSTANT:
+            SemanticError("Can't read boolean value");
+            break;
+    }
+
+    processReadFunctionCall(argumentNode->next);
+}
+
+void processWriteFunctionCall(TreeNodePtr argumentNode) {
+    if(argumentNode == NULL) {
+        return;
+    }
+
+    processExpression(argumentNode);
+    addCommand("      PRNT");
+
+    processWriteFunctionCall(argumentNode->next);
 }
 
 void processExpressionListAsParameters(TreeNodePtr node, List* expectedParams) {
