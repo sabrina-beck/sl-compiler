@@ -214,7 +214,9 @@ void processTypes(TreeNodePtr node) {
 
     TreeNodePtr typeDeclarationNode = node->subtrees[0];
     while (typeDeclarationNode != NULL) {
+
         processTypeDeclaration(typeDeclarationNode);
+
         typeDeclarationNode = typeDeclarationNode->next;
     }
 }
@@ -224,14 +226,9 @@ void processTypeDeclaration(TreeNodePtr node) {
         UnexpectedNodeCategoryError(TYPE_DECLARATION_NODE, node->category);
     }
 
-    TreeNodePtr identifierNode = node->subtrees[0];
-    char* identifier = processIdentifier(identifierNode);
-
-    TreeNodePtr typeNode = node->subtrees[1];
-    TypeDescriptorPtr type = processType(typeNode);
-
-    SymbolTableEntryPtr typeEntry = newType(getFunctionLevel(), identifier, type);
-    addSymbolTableEntry(getSymbolTable(), typeEntry);
+    char* identifier = processIdentifier(node->subtrees[0]);
+    TypeDescriptorPtr type = processType(node->subtrees[1]);
+    addType(getSymbolTable(), identifier, type);
 }
 
 int processVariables(TreeNodePtr node) {
@@ -341,8 +338,7 @@ TypeDescriptorPtr processType(TreeNodePtr node) {
         UnexpectedNodeCategoryError(TYPE_NODE, node->category);
     }
 
-    TreeNodePtr identifierNode = node->subtrees[0];
-    char* identifier = processIdentifier(identifierNode);
+    char* identifier = processIdentifier(node->subtrees[0]);
     SymbolTableEntryPtr entry = findIdentifier(getSymbolTable(), identifier);
 
     if(entry->category != TYPE_SYMBOL) {
@@ -350,14 +346,11 @@ TypeDescriptorPtr processType(TreeNodePtr node) {
     }
 
     TypeDescriptorPtr elementType = entry->description.typeDescriptor;
-
-    TreeNodePtr arraySizeNodes = node->subtrees[1];
-    TypeDescriptorPtr arrayType = processArraySizeDeclaration(arraySizeNodes, elementType);
+    TypeDescriptorPtr arrayType = processArraySizeDeclaration(node->subtrees[1], elementType);
 
     if(arrayType != NULL) {
         return arrayType;
     }
-
     return elementType;
 }
 
@@ -371,18 +364,12 @@ TypeDescriptorPtr processArraySizeDeclaration(TreeNodePtr node, TypeDescriptorPt
     }
 
     TypeDescriptorPtr subArrayType = processArraySizeDeclaration(node->next, elementType);
+    int dimension = processInteger(node->subtrees[0]);
 
-    TreeNodePtr integerNode = node->subtrees[0];
-    int dimension = processInteger(integerNode);
-
-    TypeDescriptorPtr currentElementType = subArrayType;
-    if(subArrayType == NULL) {
-        currentElementType = elementType;
+    if(subArrayType != NULL) {
+        return newArrayType(dimension, subArrayType);
     }
-
-    int size = dimension * currentElementType->size;
-
-    return newArrayType(size, dimension, currentElementType);
+    return newArrayType(dimension, elementType);
 }
 
 /* Body */

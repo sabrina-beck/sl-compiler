@@ -157,12 +157,13 @@ SymbolTableEntryPtr findIdentifier(SymbolTablePtr symbolTable, char* identifier)
 FunctionDescriptorPtr findCurrentFunctionDescriptor(SymbolTablePtr symbolTable, int level);
 
 TypeDescriptorPtr newFunctionType(FunctionHeaderPtr functionHeader);
+TypeDescriptorPtr newArrayType(int dimension, TypeDescriptorPtr elementType);
+
 SymbolTableEntryPtr addFunction(SymbolTablePtr symbolTable, FunctionHeaderPtr functionHeader);
 void addLabel(SymbolTablePtr symbolTable, char* identifier);
+void addType(SymbolTablePtr symbolTable, char* identifier, TypeDescriptorPtr typeDescriptor);
 
-SymbolTableEntryPtr newType(int level, char* identifier, TypeDescriptorPtr typeDescriptor);
 SymbolTableEntryPtr newVariable(int level, char* identifier, int displacement, TypeDescriptorPtr typeDescriptor);
-TypeDescriptorPtr newArrayType(int size, int dimension, TypeDescriptorPtr elementType);
 void addSymbolTableEntry(SymbolTablePtr symbolTable, SymbolTableEntryPtr entry);
 
 int getFunctionLevel();

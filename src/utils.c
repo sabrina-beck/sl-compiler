@@ -63,11 +63,8 @@ SymbolTablePtr initializeSymbolTable() {
     symbolTable->booleanTypeDescriptor = booleanTypeDescriptor;
 
     /* predefined types */
-    SymbolTableEntryPtr integerTypeEntry = newType(0, "integer", integerTypeDescriptor);
-    push(symbolTable->stack, integerTypeEntry);
-
-    SymbolTableEntryPtr booleanTypeEntry = newType(0, "boolean", booleanTypeDescriptor);
-    push(symbolTable->stack, booleanTypeEntry);
+    addType(symbolTable, "integer", integerTypeDescriptor);
+    addType(symbolTable, "boolean", booleanTypeDescriptor);
 
     /* predefined constants */
     SymbolTableEntryPtr falseEntry = newConstant(0, "false", 0, booleanTypeDescriptor);
@@ -211,14 +208,14 @@ void addLabel(SymbolTablePtr symbolTable, char* identifier) {
     addSymbolTableEntry(symbolTable, symbol);
 }
 
-
-SymbolTableEntryPtr newType(int level, char* identifier, TypeDescriptorPtr typeDescriptor) {
+void addType(SymbolTablePtr symbolTable, char* identifier, TypeDescriptorPtr typeDescriptor) {
     SymbolTableEntryPtr symbol = malloc(sizeof(SymbolTableEntry));
     symbol->category = TYPE_SYMBOL;
-    symbol->level = level;
+    symbol->level = currentFunctionLevel;
     symbol->identifier = identifier;
     symbol->description.typeDescriptor = typeDescriptor;
-    return symbol;
+
+    addSymbolTableEntry(symbolTable, symbol);
 }
 
 SymbolTableEntryPtr newVariable(int level, char* identifier, int displacement, TypeDescriptorPtr typeDescriptor) {
@@ -235,14 +232,14 @@ SymbolTableEntryPtr newVariable(int level, char* identifier, int displacement, T
     return symbol;
 }
 
-TypeDescriptorPtr newArrayType(int size, int dimension, TypeDescriptorPtr elementType) {
+TypeDescriptorPtr newArrayType(int dimension, TypeDescriptorPtr elementType) {
     ArrayDescriptorPtr arrayDescriptor = malloc(sizeof(ArrayDescriptor));
     arrayDescriptor->dimension = dimension;
     arrayDescriptor->elementType = elementType;
 
     TypeDescriptorPtr typeDescriptor = malloc(sizeof(TypeDescriptorPtr));
     typeDescriptor->category = ARRAY_TYPE;
-    typeDescriptor->size = size;
+    typeDescriptor->size = dimension * elementType->size;;
 
     return typeDescriptor;
 
