@@ -603,12 +603,21 @@ TypeDescriptorPtr processFunctionCall(TreeNodePtr node) {
 }
 
 TypeDescriptorPtr processFunctionParameterCall(TreeNodePtr node, SymbolTableEntryPtr functionEntry) {
+
     ParameterDescriptorPtr parameterDescriptor = functionEntry->description.parameterDescriptor;
-    if (parameterDescriptor->type->category != FUNCTION_TYPE) {
+    TypeDescriptorPtr parameterType = parameterDescriptor->type;
+
+    if (parameterType->category != FUNCTION_TYPE) {
         SemanticError("Expected function as parameter");
     }
 
-    ParameterDescriptorsListPtr expectedParameters = parameterDescriptor->type->description.functionTypeDescriptor->parameters;
+    TypeDescriptorPtr returnType = parameterType->description.functionTypeDescriptor->returnType;
+    if(returnType!= NULL && returnType->size > 0) {
+        addCommand("      ALOC   %d        result", returnType->size);
+    }
+
+    ParameterDescriptorsListPtr expectedParameters =
+            parameterType->description.functionTypeDescriptor->parameters;
     processArgumentsList(node->subtrees[1], expectedParameters);
 
     addCommand("      CPFN   %d,%d,%d",
@@ -621,6 +630,11 @@ TypeDescriptorPtr processFunctionParameterCall(TreeNodePtr node, SymbolTableEntr
 
 TypeDescriptorPtr processRegularFunctionCall(TreeNodePtr node, SymbolTableEntryPtr functionEntry) {
     FunctionDescriptorPtr functionDescriptor = functionEntry->description.functionDescriptor;
+
+    TypeDescriptorPtr returnType = functionDescriptor->returnType;
+    if(returnType!= NULL && returnType->size > 0) {
+        addCommand("      ALOC   %d        result", returnType->size);
+    }
 
     processArgumentsList(node->subtrees[1], functionDescriptor->parameters);
     addCommand("      CFUN   %s,%d", functionDescriptor->mepaLabel, getFunctionLevel());
@@ -900,6 +914,10 @@ void processReturn(TreeNodePtr node) {
 }
 
 void processReturnWithValue(TreeNodePtr expressionNode, FunctionDescriptorPtr functionDescriptor) {
+    if(functionDescriptor->returnType->size > 1) {
+        addCommand("      LADR   %d,%d", getFunctionLevel(), functionDescriptor->returnDisplacement);
+    }
+
     TypeDescriptorPtr expressionType = processExpression(expressionNode);
     if (!equivalentTypes(expressionType, functionDescriptor->returnType)) {
         SemanticError("Expression with type different than function return type");
@@ -907,10 +925,10 @@ void processReturnWithValue(TreeNodePtr expressionNode, FunctionDescriptorPtr fu
 
     if(expressionType->size == 1) {
         addCommand("      STVL   %d,%d", getFunctionLevel(), functionDescriptor->returnDisplacement);
-        addCommand("      JUMP   %s", functionDescriptor->returnLabel);
     } else {
-        SemanticError("Can't return multiple values"); // TODO check if this is correct
+        addCommand("      STMV   %d,%d", getFunctionLevel(), functionDescriptor->returnDisplacement);
     }
+    addCommand("      JUMP   %s", functionDescriptor->returnLabel);
 }
 
 void processConditional(TreeNodePtr node) {

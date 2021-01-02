@@ -178,7 +178,7 @@ void addMainFunction(SymbolTablePtr symbolTable) {
 
     functionDescriptor->variablesDisplacement = 0;
     functionDescriptor->mepaLabel = NULL; // main can't be invoked
-    functionDescriptor->returnLabel = NULL; //FIXME return in the main function
+    functionDescriptor->returnLabel = NULL;
     functionDescriptor->parametersSize = 0;
     functionDescriptor->parameters = NULL; // main has no parameters
     functionDescriptor->returnDisplacement = -1; // main has no return
@@ -222,9 +222,10 @@ SymbolTableEntryPtr addFunction(SymbolTablePtr symbolTable, FunctionHeaderPtr fu
     functionDescriptor->functionType = newFunctionType(functionHeader);
 
     if(functionHeader->parameters == NULL) {
-        functionDescriptor->returnDisplacement = FUNCTION_PARAMETERS_DISPLACEMENT;
+        functionDescriptor->returnDisplacement = FUNCTION_PARAMETERS_DISPLACEMENT - functionHeader->returnType->size;
     } else {
-        functionDescriptor->returnDisplacement = -functionDescriptor->parametersSize + FUNCTION_PARAMETERS_DISPLACEMENT;
+        functionDescriptor->returnDisplacement =
+                FUNCTION_PARAMETERS_DISPLACEMENT - functionHeader->returnType->size - functionDescriptor->parametersSize;
     }
 
     SymbolTableEntryPtr symbol = malloc(sizeof(SymbolTableEntry));
