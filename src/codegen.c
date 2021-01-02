@@ -595,7 +595,7 @@ TypeDescriptorPtr processFunctionParameterCall(TreeNodePtr node, SymbolTableEntr
         SemanticError("Expected function as parameter");
     }
 
-    List* expectedParameters = parameterDescriptor->type->description.functionTypeDescriptor->params;
+    ParameterDescriptorsListPtr expectedParameters = parameterDescriptor->type->description.functionTypeDescriptor->parameters;
     processArgumentsList(node->subtrees[1], expectedParameters);
 
     addCommand("      CPFN   %d,%d,%d",
@@ -609,7 +609,7 @@ TypeDescriptorPtr processFunctionParameterCall(TreeNodePtr node, SymbolTableEntr
 TypeDescriptorPtr processRegularFunctionCall(TreeNodePtr node, SymbolTableEntryPtr functionEntry) {
     FunctionDescriptorPtr functionDescriptor = functionEntry->description.functionDescriptor;
 
-    processArgumentsList(node->subtrees[1], functionDescriptor->params);
+    processArgumentsList(node->subtrees[1], functionDescriptor->parameters);
     addCommand("      CFUN   %s,%d", functionDescriptor->mepaLabel, getFunctionLevel());
 
     return functionDescriptor->returnType;
@@ -676,13 +676,12 @@ void processWriteFunctionCall(TreeNodePtr argumentNode) {
     processWriteFunctionCall(argumentNode->next);
 }
 
-void processArgumentsList(TreeNodePtr node, List* expectedParams) {
+void processArgumentsList(TreeNodePtr node, ParameterDescriptorsListPtr parameters) {
     TreeNodePtr currentNode = node;
-    LinkedNode* paramNode = expectedParams->front;
-    while (paramNode != NULL) {
+    ParameterDescriptorsListPtr currentParameter = parameters;
+    while (currentParameter != NULL) {
 
-        SymbolTableEntryPtr parameterEntry = (SymbolTableEntryPtr) paramNode->data;
-        ParameterDescriptorPtr expectedParameterDescriptor = parameterEntry->description.parameterDescriptor;
+        ParameterDescriptorPtr expectedParameterDescriptor = currentParameter->descriptor;
 
         switch (expectedParameterDescriptor->parameterPassage) {
             case VALUE_PARAMETER: {
@@ -767,11 +766,11 @@ void processArgumentsList(TreeNodePtr node, List* expectedParams) {
                 break;
         }
 
-        paramNode = paramNode->next;
+        currentParameter = currentParameter->next;
         currentNode = currentNode->next;
     }
 
-    if(paramNode->next != NULL) {
+    if(currentParameter->next != NULL) {
         SemanticError("Missing parameters for function call");
     }
 

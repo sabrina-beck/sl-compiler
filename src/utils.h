@@ -17,6 +17,7 @@ typedef enum {
 
 struct _TypeDescriptor;
 struct _ParameterDescriptor;
+struct _ParametersList;
 
 typedef enum {
     PREDEFINED_TYPE,
@@ -41,7 +42,7 @@ typedef struct {
 
 typedef struct {
     struct _TypeDescriptor* returnType;
-    List* params; // List of SymbolTableEntry of category PARAMETER_SYMBOL
+    struct _ParametersList* parameters;
 } FunctionTypeDescriptor, *FunctionTypeDescriptorPtr;
 
 typedef struct _TypeDescriptor {
@@ -70,6 +71,11 @@ typedef struct _ParameterDescriptor {
     ParameterPassage parameterPassage;
 } ParameterDescriptor, *ParameterDescriptorPtr;
 
+typedef struct _ParametersList {
+    ParameterDescriptorPtr descriptor;
+    struct _ParametersList* next;
+} ParameterDescriptorsList, *ParameterDescriptorsListPtr;
+
 typedef struct {
     char* mepaLabel;
     char* returnLabel;
@@ -77,7 +83,7 @@ typedef struct {
     int parametersSize;
     int returnDisplacement;
     TypeDescriptorPtr returnType;
-    List* params; // List of SymbolTableEntry of category PARAMETER_SYMBOL
+    ParameterDescriptorsListPtr parameters;
 } FunctionDescriptor, *FunctionDescriptorPtr;
 
 typedef struct {

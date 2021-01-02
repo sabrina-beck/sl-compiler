@@ -5,7 +5,7 @@
 
 #define FUNCTION_PARAMETERS_DISPLACEMENT -5;
 
-bool equivalentParameters(List* params1, List* params2);
+bool equivalentParameters(ParameterDescriptorsListPtr params1, ParameterDescriptorsListPtr params2);
 
 /** Symbol table auxiliary functions **/
 TypeDescriptorPtr newPredefinedTypeDescriptor(int size, PredefinedType predefinedType);
@@ -117,54 +117,38 @@ FunctionDescriptorPtr findCurrentFunctionDescriptor(SymbolTablePtr symbolTable) 
     return entry->description.functionDescriptor;
 }
 
-SymbolTableEntryPtr newParameter(ParameterPtr parameter, int displacement) {
+ParameterDescriptorPtr newParameterDescriptor(ParameterPtr parameter, int displacement) {
     ParameterDescriptorPtr parameterDescriptor = malloc(sizeof(ParameterDescriptorPtr));
     parameterDescriptor->displacement = displacement;
     parameterDescriptor->type = parameter->type;
     parameterDescriptor->parameterPassage = parameter->passage;
 
-    SymbolTableEntryPtr symbol = malloc(sizeof(SymbolTableEntry));
-    symbol->category = PARAMETER_SYMBOL;
-    symbol->level = currentFunctionLevel;
-    symbol->identifier = parameter->name;
-    symbol->description.parameterDescriptor = parameterDescriptor;
-
-    return symbol;
+    return parameterDescriptor;
 }
 
-List* newParameterEntries(ParameterPtr parameters) {
-    List* list = newList();
+ParameterDescriptorsListPtr newParameterDescriptors(ParameterPtr parameters) {
+    ParameterDescriptorsListPtr parametersList = NULL;
+
+    int displacement = FUNCTION_PARAMETERS_DISPLACEMENT;
 
     ParameterPtr current = parameters;
-    int displacement = FUNCTION_PARAMETERS_DISPLACEMENT;
     while(current != NULL) {
-        SymbolTableEntryPtr parameterEntry = newParameter(parameters, displacement);
-        add(list, parameterEntry); // invert the list again, so the parameters order is correct
 
-        displacement -= parameterEntry->description.parameterDescriptor->type->size;
+        ParameterDescriptorsListPtr parameterItem = malloc(sizeof(ParameterDescriptorsList));
+        parameterItem->descriptor = newParameterDescriptor(current, displacement);
+        parameterItem->next = parametersList;
+        parametersList = parameterItem;
+
+        displacement -= parameterItem->descriptor->type->size;
         current = current->next;
     }
 
-    return list;
-}
-
-List* addParameterEntries(SymbolTablePtr symbolTable, ParameterPtr parameters) {
-    List* entries = newParameterEntries(parameters);
-
-    LinkedNode* current = entries->front;
-    while(current != NULL) {
-        SymbolTableEntryPtr symbol = (SymbolTableEntryPtr) current->data;
-        addSymbolTableEntry(symbolTable, symbol);
-
-        current = current->next;
-    }
-
-    return entries;
+    return parametersList;
 }
 
 TypeDescriptorPtr newFunctionType(FunctionHeaderPtr functionHeader) {
     FunctionTypeDescriptorPtr functionTypeDescriptor = malloc(sizeof(FunctionTypeDescriptor));
-    functionTypeDescriptor->params = newParameterEntries(functionHeader->parameters);
+    functionTypeDescriptor->parameters = newParameterDescriptors(functionHeader->parameters);
     functionTypeDescriptor->returnType = functionHeader->returnType;
 
     TypeDescriptorPtr type = malloc(sizeof(TypeDescriptorPtr));
@@ -196,11 +180,33 @@ void addMainFunction(SymbolTablePtr symbolTable) {
     functionDescriptor->mepaLabel = NULL; // main can't be invoked
     functionDescriptor->returnLabel = NULL; //FIXME return in the main function
     functionDescriptor->parametersSize = 0;
-    functionDescriptor->params = NULL; // main has no parameters
+    functionDescriptor->parameters = NULL; // main has no parameters
     functionDescriptor->returnDisplacement = -1; // main has no return
     functionDescriptor->returnType = NULL; // VOID
 
     symbolTable->mainFunctionDescriptor = functionDescriptor;
+}
+
+void addParameter(SymbolTablePtr symbolTable, char* identifier, ParameterDescriptorPtr parameterDescriptor) {
+    SymbolTableEntryPtr symbol = malloc(sizeof(SymbolTableEntry));
+    symbol->category = PARAMETER_SYMBOL;
+    symbol->level = currentFunctionLevel;
+    symbol->identifier = identifier;
+    symbol->description.parameterDescriptor = parameterDescriptor;
+
+    addSymbolTableEntry(symbolTable, symbol);
+}
+
+ParameterDescriptorsListPtr addParameterEntries(SymbolTablePtr symbolTable, ParameterPtr parameters) {
+    ParameterDescriptorsListPtr parameterDescriptors = newParameterDescriptors(parameters);
+
+    ParameterDescriptorsListPtr currentDescriptor = parameterDescriptors;
+    ParameterPtr currentParameter = parameters;
+    while(currentDescriptor != NULL && currentParameter != NULL) {
+        addParameter(symbolTable, currentParameter->name, currentDescriptor->descriptor);
+    }
+
+    return parameterDescriptors;
 }
 
 SymbolTableEntryPtr addFunction(SymbolTablePtr symbolTable, FunctionHeaderPtr functionHeader) {
@@ -212,7 +218,7 @@ SymbolTableEntryPtr addFunction(SymbolTablePtr symbolTable, FunctionHeaderPtr fu
     functionDescriptor->variablesDisplacement = 0;
     functionDescriptor->parametersSize = totalParametersSize(functionHeader->parameters);
     functionDescriptor->returnType = functionHeader->returnType;
-    functionDescriptor->params = addParameterEntries(symbolTable, functionHeader->parameters);
+    functionDescriptor->parameters = addParameterEntries(symbolTable, functionHeader->parameters);
 
     if(functionHeader->parameters == NULL) {
         functionDescriptor->returnDisplacement = FUNCTION_PARAMETERS_DISPLACEMENT;
@@ -281,16 +287,6 @@ void addVariable(SymbolTablePtr symbolTable, char* identifier, TypeDescriptorPtr
 
 void addSymbolTableEntry(SymbolTablePtr symbolTable, SymbolTableEntryPtr entry) {
     push(symbolTable->stack, entry);
-
-    if(entry->category == FUNCTION_SYMBOL) {
-        LinkedNode* current = entry->description.functionDescriptor->params->front;
-
-        while (current != NULL) {
-            SymbolTableEntryPtr paramEntry = (SymbolTableEntryPtr) current->data;
-            addSymbolTableEntry(symbolTable, paramEntry);
-            current = current->next;
-        }
-    }
 }
 
 int getFunctionLevel() {
@@ -337,8 +333,8 @@ bool equivalentTypes(TypeDescriptorPtr type1, TypeDescriptorPtr type2) {
                    type1->description.arrayDescriptor->dimension == type2->description.arrayDescriptor->dimension &&
                    equivalentTypes(type1->description.arrayDescriptor->elementType, type2->description.arrayDescriptor->elementType);
         case FUNCTION_TYPE: {
-            List* params1 = type1->description.functionTypeDescriptor->params;
-            List* params2 = type2->description.functionTypeDescriptor->params;
+            ParameterDescriptorsListPtr params1 = type1->description.functionTypeDescriptor->parameters;
+            ParameterDescriptorsListPtr params2 = type2->description.functionTypeDescriptor->parameters;
 
             return type1->category == type2->category &&
                    type1->size == type2->size &&
@@ -352,22 +348,16 @@ bool equivalentTypes(TypeDescriptorPtr type1, TypeDescriptorPtr type2) {
 bool equivalentFunctions(TypeDescriptorPtr functionType, FunctionDescriptorPtr functionDescriptor) {
     FunctionTypeDescriptorPtr function1Descriptor = functionType->description.functionTypeDescriptor;
     return equivalentTypes(function1Descriptor->returnType, functionDescriptor->returnType)
-            && equivalentParameters(function1Descriptor->params, functionDescriptor->params);
+            && equivalentParameters(function1Descriptor->parameters, functionDescriptor->parameters);
 }
 
-bool equivalentParameters(List* params1, List* params2) {
-    if (params1->size != params2->size) {
-        return false;
-    }
-
-    LinkedNode* currentParam1 = params1->front;
-    LinkedNode* currentParam2 = params2->front;
+bool equivalentParameters(ParameterDescriptorsListPtr params1, ParameterDescriptorsListPtr params2) {
+    ParameterDescriptorsListPtr currentParam1 = params1;
+    ParameterDescriptorsListPtr currentParam2 = params2;
     while (currentParam1 != NULL && currentParam2 != NULL) {
-        SymbolTableEntryPtr param1 = (SymbolTableEntryPtr) currentParam1->data;
-        TypeDescriptorPtr param1Type = param1->description.parameterDescriptor->type;
 
-        SymbolTableEntryPtr param2 = (SymbolTableEntryPtr) currentParam2->data;
-        TypeDescriptorPtr param2Type = param2->description.parameterDescriptor->type;
+        TypeDescriptorPtr param1Type = currentParam1->descriptor->type;
+        TypeDescriptorPtr param2Type = currentParam2->descriptor->type;
 
         if (!equivalentTypes(param1Type, param2Type)) {
             return false;
@@ -375,6 +365,10 @@ bool equivalentParameters(List* params1, List* params2) {
 
         currentParam1 = currentParam1->next;
         currentParam2 = currentParam2->next;
+    }
+
+    if(currentParam1 != NULL || currentParam2 != NULL) {
+        return false;
     }
 
     return true;
