@@ -1019,8 +1019,8 @@ TypeDescriptorPtr processExpression(TreeNodePtr node) {
         return routeExpressionSubtree(firstExprNode);
     }
 
-    TypeDescriptorPtr secondExprType = processBinaryOpExpression(binaryOpExprNode);
     TypeDescriptorPtr firstExprType = routeExpressionSubtree(firstExprNode);
+    TypeDescriptorPtr secondExprType = processBinaryOpExpression(binaryOpExprNode);
     TypeDescriptorPtr operatorType = processRelationalOperator(relationalOperatorNode);
 
     if(!equivalentTypes(firstExprType, secondExprType)) {

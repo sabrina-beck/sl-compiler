@@ -234,7 +234,7 @@ SymbolTableEntryPtr addFunction(SymbolTablePtr symbolTable, FunctionHeaderPtr fu
 
     SymbolTableEntryPtr symbol = malloc(sizeof(SymbolTableEntry));
     symbol->category = FUNCTION_SYMBOL;
-    symbol->level = ++currentFunctionLevel;
+    symbol->level = currentFunctionLevel;
     symbol->identifier = functionHeader->name;
     symbol->description.functionDescriptor = functionDescriptor;
 
