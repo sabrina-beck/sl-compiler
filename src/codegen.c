@@ -487,14 +487,15 @@ void processAssignment(TreeNodePtr node) {
     }
 
     switch (value.category) {
-        case ARRAY:
+        case ARRAY_VALUE:
+        case ARRAY_REFERENCE:
             addCommand("      STMV   %d", value.type->size);
             break;
-        case ADDRESS:
-            addCommand("      STVI   %d,%d", value.level, value.displacement);
+        case REFERENCE:
+            addCommand("      STVI   %d,%d", value.level, value.content.displacement);
             break;
         case VALUE:
-            addCommand("      STVL   %d,%d", value.level, value.displacement);
+            addCommand("      STVL   %d,%d", value.level, value.content.displacement);
             break;
         case CONSTANT:
             SemanticError("Constants can't be assigned");
@@ -511,107 +512,58 @@ Value processValue(TreeNodePtr node) {
     char* identifier = processIdentifier(node->subtrees[0]);
     SymbolTableEntryPtr entry = findIdentifier(getSymbolTable(), identifier);
 
-    Value value;
-    value.level = entry->level;
-
-    TypeDescriptorPtr variableDeclarationType;
-    switch (entry->category) {
-        case VARIABLE_SYMBOL: {
-            value.category = VALUE;
-            value.displacement = entry->description.variableDescriptor->displacement;
-            variableDeclarationType = entry->description.variableDescriptor->type;
-        }
-            break;
-        case PARAMETER_SYMBOL: {
-            ParameterPassage passage = entry->description.parameterDescriptor->parameterPassage;
-            switch (passage) {
-                case VALUE_PARAMETER:
-                    value.category = ADDRESS;
-                    break;
-                case VARIABLE_PARAMETER:
-                    value.category = VALUE;
-                    break;
-                default:
-                    SemanticError("Unexpected parameter passage type");
-            }
-            value.displacement = entry->description.parameterDescriptor->displacement;
-            variableDeclarationType = entry->description.parameterDescriptor->type;
-        }
-            break;
-        case CONSTANT_SYMBOL:
-            value.category = CONSTANT;
-            value.value = entry->description.constantDescriptor->value;
-            variableDeclarationType = entry->description.constantDescriptor->type;
-            break;
-        default:
-            SymbolEntryCategoryError("value", entry->category);
-    }
+    Value value = valueFromEntry(entry);
 
     TreeNodePtr arrayIndexNode = node->subtrees[1];
-    TypeDescriptorPtr arrayPositionType = NULL;
-    if(entry->category == ARRAY_TYPE) {
-        arrayPositionType = processArrayIndexList(arrayIndexNode, value, variableDeclarationType);
+    if(arrayIndexNode != NULL) {
+        value = processArrayIndexList(arrayIndexNode, value);
     }
-    if(arrayIndexNode != NULL && variableDeclarationType->category != ARRAY_TYPE) {
-        SemanticError("Trying to index non array value");
+    return value;
+
+}
+
+// it modifies value.type
+Value processArrayIndexList(TreeNodePtr node, Value value) {
+    switch (value.category) {
+        case ARRAY_VALUE:
+            addCommand("      LADR   %d,%d", value.level, value.content.displacement);
+        case ARRAY_REFERENCE:
+            addCommand("      LDVL   %d,%d", value.level, value.content.displacement);
+            break;
+        default:
+            SemanticError("Trying to index non array value");
     }
 
-    if(arrayPositionType != NULL) {
-        value.type = arrayPositionType;
-        value.category = ARRAY;
-    } else {
-        value.type = variableDeclarationType;
+    TreeNodePtr currentIndexNode = node;
+    while (node != NULL) {
+
+        value = processArrayIndex(currentIndexNode, value);
+
+        currentIndexNode = currentIndexNode->next;
     }
 
     return value;
 }
 
-TypeDescriptorPtr processArrayIndexList(TreeNodePtr node, Value value, TypeDescriptorPtr variableTypeDescriptor) {
-    switch (value.category) {
-        case ADDRESS:
-            addCommand("      LDVL   %d,%d", value.level, value.displacement);
-            break;
-        case VALUE:
-            addCommand("      LADR   %d,%d", value.level, value.displacement);
-            break;
-        case ARRAY:
-            //FIXME parameters we won't receive an array here
-            break;
-        case CONSTANT:
-            if(node != NULL) {
-                SemanticError("Constant can't have index");
-            }
-            return NULL;
-            break;
-    }
-
-    TreeNodePtr currentIndexNode = node;
-    TypeDescriptorPtr currentType = variableTypeDescriptor;
-    while (node != NULL) {
-        currentType = processArrayIndex(currentIndexNode, currentType);
-        currentIndexNode = currentIndexNode->next;
-    }
-
-    return currentType;
-}
-
-TypeDescriptorPtr processArrayIndex(TreeNodePtr node, TypeDescriptorPtr arrayTypeDescriptor) {
+Value processArrayIndex(TreeNodePtr node, Value value) {
     if(node->category != ARRAY_INDEX_NODE) {
         UnexpectedNodeCategoryError(ARRAY_INDEX_NODE, node->category);
     }
 
-    if(arrayTypeDescriptor->category != ARRAY_TYPE) {
+    if(value.type->category != ARRAY_TYPE) {
         SemanticError("Expected array type to process array index");
     }
 
-    TreeNodePtr expressionNode = node->subtrees[0];
-    TypeDescriptorPtr exprType = processExpression(expressionNode);
+    TypeDescriptorPtr exprType = processExpression(node->subtrees[0]);
+
     if(!equivalentTypes(exprType, getSymbolTable()->integerTypeDescriptor)) {
         SemanticError("Index should be an integer");
     }
-    addCommand("      INDX   %d", arrayTypeDescriptor->size);
 
-    return arrayTypeDescriptor->description.arrayDescriptor->elementType;
+    addCommand("      INDX   %d", value.type->size);
+
+    value.type = value.type->description.arrayDescriptor->elementType;
+    return value;
 }
 
 TypeDescriptorPtr processFunctionCall(TreeNodePtr node) {
@@ -654,14 +606,15 @@ TypeDescriptorPtr processFunctionCall(TreeNodePtr node) {
                         TreeNodePtr variableNode = getVariableExpression(currentExpr);
                         Value value = processValue(variableNode);
                         switch (value.category) {
-                            case ARRAY:
+                            case ARRAY_VALUE:
+                            case ARRAY_REFERENCE:
                                 addCommand("      STMV   1");
                                 break;
-                            case ADDRESS:
-                                addCommand("      STVI   %d,%d", value.level, value.displacement);
+                            case REFERENCE:
+                                addCommand("      STVI   %d,%d", value.level, value.content.displacement);
                                 break;
                             case VALUE:
-                                addCommand("      STVL   %d,%d", value.level, value.displacement);
+                                addCommand("      STVL   %d,%d", value.level, value.content.displacement);
                                 break;
                             case CONSTANT:
                                 SemanticError("Can't read boolean value");
@@ -711,17 +664,18 @@ void processExpressionListAsParameters(TreeNodePtr node, List* expectedParams) {
                 }
 
                 switch (value.category) {
-                    case ARRAY:
+                    case ARRAY_VALUE:
+                    case ARRAY_REFERENCE:
                         // process value alvalueready left the address on top of the stack
                         break;
-                    case ADDRESS:
-                        addCommand("      LDVL   %d,%d", value.level, value.displacement);
+                    case REFERENCE:
+                        addCommand("      LDVL   %d,%d", value.level, value.content.displacement);
                         break;
                     case VALUE:
-                        addCommand("      LADR   %d,%d", value.level, value.displacement);
+                        addCommand("      LADR   %d,%d", value.level, value.content.displacement);
                         break;
                     case CONSTANT:
-                        addCommand("      LDCT   %d", value.value);
+                        addCommand("      LDCT   %d", value.content.value);
                         break;
                 }
             }
@@ -1119,17 +1073,18 @@ TypeDescriptorPtr processFactor(TreeNodePtr node) {
         case VALUE_NODE: {
             Value value = processValue(specificFactorNode);
             switch (value.category) {
-                case ARRAY:
+                case ARRAY_VALUE:
+                case ARRAY_REFERENCE:
                     addCommand("      LDMV   %d", value.type->size);
                     break;
-                case ADDRESS:
-                    addCommand("      LVLI   %d, %d", value.level, value.displacement);
+                case REFERENCE:
+                    addCommand("      LVLI   %d, %d", value.level, value.content.displacement);
                     break;
                 case VALUE:
-                    addCommand("      LDVL   %d,%d", value.level, value.displacement);
+                    addCommand("      LDVL   %d,%d", value.level, value.content.displacement);
                     break;
                 case CONSTANT: {
-                    addCommand("      LDCT   %d", value.value);
+                    addCommand("      LDCT   %d", value.content.value);
                 }
                     break;
             }

@@ -28,7 +28,7 @@ for testFile in tests/sl/*; do
   if [ "$DIFF" != "" ]
   then
     echo -e " | ${RED}FAILED${NO_COLOR}"
-    diff --color $resultProgram $expectedResponsePath
+    diff -y --color $resultProgram $expectedResponsePath
     #diff --color $resultFile $expectedResponsePath
   else
     echo -e " | ${GREEN}SUCCESS${NO_COLOR}"

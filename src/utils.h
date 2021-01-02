@@ -5,6 +5,10 @@
 
 #include "datastructures.h"
 
+/****
+ * Symbol Table definitions
+ ****/
+
 typedef enum {
     VALUE_PARAMETER,
     VARIABLE_PARAMETER,
@@ -114,7 +118,7 @@ typedef struct {
 } SymbolTable, *SymbolTablePtr;
 
 /****
- *
+ * Other definitions
  ****/
 
 struct _FunctionHeader;
@@ -132,25 +136,26 @@ typedef struct _FunctionHeader {
     ParameterPtr parameters;
 } FunctionHeader, *FunctionHeaderPtr;
 
-ParameterPtr concatenateParameters(ParameterPtr parameters1, ParameterPtr parameters2);
-
 typedef enum {
     CONSTANT,
-    ADDRESS,
+    REFERENCE,
     VALUE,
-    ARRAY
+    ARRAY_VALUE,
+    ARRAY_REFERENCE
 } ValueCategory;
 
 typedef struct {
     ValueCategory category;
     TypeDescriptorPtr type;
     int level;
-    int displacement;
-    int value;
+    union {
+        int displacement; // REFERENCE, VALUE, ARRAY_VALUE, ARRAY_REFERENCE
+        int value; // CONSTANTS
+    } content;
 } Value;
 
 /****
- *
+ * Symbol Table functions
  ****/
 
 SymbolTablePtr initializeSymbolTable();
@@ -161,27 +166,34 @@ FunctionDescriptorPtr findCurrentFunctionDescriptor(SymbolTablePtr symbolTable);
 TypeDescriptorPtr newFunctionType(FunctionHeaderPtr functionHeader);
 TypeDescriptorPtr newArrayType(int dimension, TypeDescriptorPtr elementType);
 
-void addMainFunction(SymbolTablePtr symbolTable);
 SymbolTableEntryPtr addFunction(SymbolTablePtr symbolTable, FunctionHeaderPtr functionHeader);
+void addMainFunction(SymbolTablePtr symbolTable);
 void addLabel(SymbolTablePtr symbolTable, char* identifier);
 void addType(SymbolTablePtr symbolTable, char* identifier, TypeDescriptorPtr typeDescriptor);
 void addVariable(SymbolTablePtr symbolTable, char* identifier, TypeDescriptorPtr typeDescriptor);
 
-void addSymbolTableEntry(SymbolTablePtr symbolTable, SymbolTableEntryPtr entry);
-
-int getFunctionLevel();
 void endFunctionLevel(SymbolTablePtr symbolTablePtr);
-
-
-int parametersTotalSize(SymbolTableEntryPtr entry); // entry of category FUNCTION_SYMBOL
 
 bool equivalentTypes(TypeDescriptorPtr type1, TypeDescriptorPtr type2);
 bool equivalentFunctions(TypeDescriptorPtr functionType, FunctionDescriptorPtr functionDescriptor);
 
+//...
+void addSymbolTableEntry(SymbolTablePtr symbolTable, SymbolTableEntryPtr entry);
+
+int getFunctionLevel();
+
 char* nextMEPALabel();
 
+/****
+ * Other functions
+ ****/
 
-/* Debug */
+ParameterPtr concatenateParameters(ParameterPtr parameters1, ParameterPtr parameters2);
+Value valueFromEntry(SymbolTableEntryPtr entry);
+
+/****
+ * Debug
+ ****/
 char* getSymbolTableCategoryName(SymbolTableCategory category);
 
 #endif

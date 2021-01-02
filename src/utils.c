@@ -164,7 +164,7 @@ List* addParameterEntries(SymbolTablePtr symbolTable, ParameterPtr parameters) {
 
 TypeDescriptorPtr newFunctionType(FunctionHeaderPtr functionHeader) {
     FunctionTypeDescriptorPtr functionTypeDescriptor = malloc(sizeof(FunctionTypeDescriptor));
-    functionTypeDescriptor->params = newParameterEntries(functionHeader->parameters); // FIXME
+    functionTypeDescriptor->params = newParameterEntries(functionHeader->parameters);
     functionTypeDescriptor->returnType = functionHeader->returnType;
 
     TypeDescriptorPtr type = malloc(sizeof(TypeDescriptorPtr));
@@ -173,6 +173,19 @@ TypeDescriptorPtr newFunctionType(FunctionHeaderPtr functionHeader) {
     type->description.functionTypeDescriptor = functionTypeDescriptor;
 
     return type;
+}
+
+TypeDescriptorPtr newArrayType(int dimension, TypeDescriptorPtr elementType) {
+    ArrayDescriptorPtr arrayDescriptor = malloc(sizeof(ArrayDescriptor));
+    arrayDescriptor->dimension = dimension;
+    arrayDescriptor->elementType = elementType;
+
+    TypeDescriptorPtr typeDescriptor = malloc(sizeof(TypeDescriptorPtr));
+    typeDescriptor->category = ARRAY_TYPE;
+    typeDescriptor->size = dimension * elementType->size;;
+
+    return typeDescriptor;
+
 }
 
 void addMainFunction(SymbolTablePtr symbolTable) {
@@ -212,6 +225,7 @@ SymbolTableEntryPtr addFunction(SymbolTablePtr symbolTable, FunctionHeaderPtr fu
     symbol->level = ++currentFunctionLevel;
     symbol->identifier = functionHeader->name;
     symbol->description.functionDescriptor = functionDescriptor;
+    symbol->description.typeDescriptor = newFunctionType(functionHeader);
 
     addSymbolTableEntry(symbolTable, symbol);
 
@@ -265,19 +279,6 @@ void addVariable(SymbolTablePtr symbolTable, char* identifier, TypeDescriptorPtr
     addSymbolTableEntry(symbolTable, symbol);
 }
 
-TypeDescriptorPtr newArrayType(int dimension, TypeDescriptorPtr elementType) {
-    ArrayDescriptorPtr arrayDescriptor = malloc(sizeof(ArrayDescriptor));
-    arrayDescriptor->dimension = dimension;
-    arrayDescriptor->elementType = elementType;
-
-    TypeDescriptorPtr typeDescriptor = malloc(sizeof(TypeDescriptorPtr));
-    typeDescriptor->category = ARRAY_TYPE;
-    typeDescriptor->size = dimension * elementType->size;;
-
-    return typeDescriptor;
-
-}
-
 void addSymbolTableEntry(SymbolTablePtr symbolTable, SymbolTableEntryPtr entry) {
     push(symbolTable->stack, entry);
 
@@ -318,28 +319,6 @@ void endFunctionLevel(SymbolTablePtr symbolTablePtr) {
         push(symbolTablePtr->stack, poped);
     }
     free(auxStack);
-}
-
-int parametersTotalSize(SymbolTableEntryPtr entry) {
-    if (entry->category != FUNCTION_SYMBOL) {
-        fprintf(stderr, "parametersTotalSize: Expected %s, got: %s\n",
-                getSymbolTableCategoryName(FUNCTION_SYMBOL), getSymbolTableCategoryName(entry->category));
-        exit(0);
-    }
-
-    int parametersTotalSize = 0;
-
-    List* parameters = entry->description.functionDescriptor->params;
-
-    LinkedNode* current = parameters->front;
-    while (current != NULL) {
-        SymbolTableEntryPtr entry = (SymbolTableEntryPtr) current->data;
-        parametersTotalSize += entry->description.parameterDescriptor->type->size;
-
-        current = current->next;
-    }
-
-    return parametersTotalSize;
 }
 
 bool equivalentTypes(TypeDescriptorPtr type1, TypeDescriptorPtr type2) {
@@ -458,7 +437,78 @@ int countDigits(int number) {
     return count;
 }
 
-/* Debug */
+/****
+ * Others
+ ****/
+Value variableSymbolToValue(SymbolTableEntryPtr entry) {
+    Value value;
+    value.type = entry->description.variableDescriptor->type;
+    value.level = entry->level;
+    value.content.displacement = entry->description.variableDescriptor->displacement;
+    value.category = VALUE;
+    return value;
+}
+
+Value parameterSymbolToValue(SymbolTableEntryPtr entry) {
+    Value value;
+    value.type = entry->description.parameterDescriptor->type;
+    value.level = entry->level;
+    value.content.displacement = entry->description.parameterDescriptor->displacement;
+
+    ParameterDescriptorPtr parameterDescriptor = entry->description.parameterDescriptor;
+    switch(parameterDescriptor->type->category) {
+        case PREDEFINED_TYPE:
+            if(parameterDescriptor->parameterPassage == VARIABLE_PARAMETER) {
+                value.category = REFERENCE;
+            } else {
+                value.category = VALUE;
+            }
+            break;
+        case ARRAY_TYPE:
+            if(parameterDescriptor->parameterPassage == VARIABLE_PARAMETER) {
+                value.category = ARRAY_REFERENCE;
+            } else {
+                value.category = ARRAY_VALUE;
+            }
+            break;
+        default: {
+            fprintf(stderr, "Expected predefined type or array type to convert to Value\n");
+            exit(0);
+        }
+    }
+    return value;
+}
+
+Value constantSymbolToValue(SymbolTableEntryPtr entry) {
+    Value value;
+    value.type = entry->description.constantDescriptor->type;
+    value.level = entry->level;
+    value.content.value = entry->description.constantDescriptor->value;
+    value.category = CONSTANT;
+    return value;
+}
+
+Value valueFromEntry(SymbolTableEntryPtr entry) {
+    switch(entry->category) {
+        case VARIABLE_SYMBOL: {
+            return variableSymbolToValue(entry);
+        }
+        case PARAMETER_SYMBOL: {
+            return parameterSymbolToValue(entry);
+        }
+        case CONSTANT_SYMBOL: {
+            return constantSymbolToValue(entry);
+        }
+        default: {
+            fprintf(stderr, "Unexpected entry category to convert to Value\n");
+            exit(0);
+        }
+    }
+}
+
+/****
+ * Debug
+ ****/
 char* getSymbolTableCategoryName(SymbolTableCategory category) {
     switch (category) {
         case TYPE_SYMBOL:
