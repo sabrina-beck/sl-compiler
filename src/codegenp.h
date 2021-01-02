@@ -59,12 +59,20 @@ Value processArrayIndexList(TreeNodePtr node, Value variable);
 Value processArrayIndex(TreeNodePtr node, Value value);
 
 TypeDescriptorPtr processFunctionCall(TreeNodePtr node);
+
 TypeDescriptorPtr processFunctionParameterCall(TreeNodePtr node, SymbolTableEntryPtr functionEntry);
 TypeDescriptorPtr processRegularFunctionCall(TreeNodePtr node, SymbolTableEntryPtr functionEntry);
 TypeDescriptorPtr processPseudoFunctionCall(TreeNodePtr node, SymbolTableEntryPtr functionEntry);
 void processReadFunctionCall(TreeNodePtr argumentNode);
 void processWriteFunctionCall(TreeNodePtr argumentNode);
+
 void processArgumentsList(TreeNodePtr node, ParameterDescriptorsListPtr parameters);
+void processArgumentByValue(ParameterDescriptorPtr expectedParameter, TreeNodePtr node);
+void processArgumentByReference(ParameterDescriptorPtr expectedParameter, TreeNodePtr node);
+void processArgumentByFunctionAsParameter(ParameterDescriptorPtr expectedParameter, TreeNodePtr node);
+void processDeclaredFunctionAsArgument(ParameterDescriptorPtr expectedParameter, SymbolTableEntryPtr valueEntry);
+void processFunctionParameterAsArgument(ParameterDescriptorPtr expectedParameter, SymbolTableEntryPtr valueEntry);
+
 TreeNodePtr getVariableExpression(TreeNodePtr node);
 
 void processGoto(TreeNodePtr node);

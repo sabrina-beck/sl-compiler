@@ -677,106 +677,130 @@ void processWriteFunctionCall(TreeNodePtr argumentNode) {
 }
 
 void processArgumentsList(TreeNodePtr node, ParameterDescriptorsListPtr parameters) {
+
     TreeNodePtr currentNode = node;
     ParameterDescriptorsListPtr currentParameter = parameters;
-    while (currentParameter != NULL) {
+    while (currentParameter != NULL && currentNode != NULL) {
 
-        ParameterDescriptorPtr expectedParameterDescriptor = currentParameter->descriptor;
-
-        switch (expectedParameterDescriptor->parameterPassage) {
+        switch (currentParameter->descriptor->parameterPassage) {
             case VALUE_PARAMETER: {
-                TypeDescriptorPtr expressionType = processExpression(currentNode);
-
-                if(!equivalentTypes(expectedParameterDescriptor->type, expressionType)) {
-                    SemanticError("Wrong parameter type on function");
-                }
-            }
+                processArgumentByValue(currentParameter->descriptor, currentNode);
                 break;
+            }
             case VARIABLE_PARAMETER: {
-                TreeNodePtr variableNode = getVariableExpression(currentNode);
-                Value value = processValue(variableNode);
-
-                if(!equivalentTypes(expectedParameterDescriptor->type, value.type)) {
-                    SemanticError("Wrong parameter type on function");
-                }
-
-                switch (value.category) {
-                    case ARRAY_VALUE:
-                    case ARRAY_REFERENCE:
-                        // process value alvalueready left the address on top of the stack
-                        break;
-                    case REFERENCE:
-                        addCommand("      LDVL   %d,%d", value.level, value.content.displacement);
-                        break;
-                    case VALUE:
-                        addCommand("      LADR   %d,%d", value.level, value.content.displacement);
-                        break;
-                    case CONSTANT:
-                        addCommand("      LDCT   %d", value.content.value);
-                        break;
-                }
-            }
+                processArgumentByReference(currentParameter->descriptor, currentNode);
                 break;
+            }
             case FUNCTION_PARAMETER: {
-                TreeNodePtr variableNode = getVariableExpression(currentNode);
-
-                TreeNodePtr identifierNode = variableNode->subtrees[0];
-                char* identifier = processIdentifier(identifierNode);
-
-                SymbolTableEntryPtr variableEntry = findIdentifier(getSymbolTable(), identifier);
-                switch (variableEntry->category) {
-                    case FUNCTION_SYMBOL: {
-                        FunctionDescriptorPtr functionDescriptor = variableEntry->description.functionDescriptor;
-                        if(!equivalentFunctions(expectedParameterDescriptor->type, functionDescriptor)) {
-                            SemanticError("Wrong parameter type on function");
-                        }
-                        addCommand("      LGAD   %s,%d", functionDescriptor->mepaLabel, variableEntry->level - 1);
-                    }
-                        break;
-                    case PARAMETER_SYMBOL: {
-                        ParameterDescriptorPtr parameterDescriptor = variableEntry->description.parameterDescriptor;
-                        TypeDescriptorPtr parameterType = parameterDescriptor->type;
-                        if (parameterType->category != FUNCTION_TYPE) {
-                            SemanticError("Expected function as parameter");
-                        }
-
-                        if(!equivalentTypes(expectedParameterDescriptor->type, parameterDescriptor->type)) {
-                            SemanticError("Wrong parameter type on function");
-                        }
-
-                        // generalized address is already on the stack
-                        // load the MEPA address
-                        addCommand("      LDVL   %s,%d", variableEntry->level, parameterDescriptor->displacement);
-                        // load the value of the base register D[k]
-                        addCommand("      LDVL   %s,%d", variableEntry->level, parameterDescriptor->displacement + 1);
-                        // load the level k
-                        addCommand("      LDVL   %s,%d", variableEntry->level, parameterDescriptor->displacement + 2);
-                    }
-                        break;
-                    default:
-                        SemanticError("Expected function as parameter");
-                }
-
-                TreeNodePtr arrayIndexNode = variableNode->subtrees[1];
-                if(arrayIndexNode != NULL) {
-                    SemanticError("Trying to index function identifier");
-                }
-
-            }
+                processArgumentByFunctionAsParameter(currentParameter->descriptor, currentNode);
                 break;
+            }
         }
 
         currentParameter = currentParameter->next;
         currentNode = currentNode->next;
     }
 
-    if(currentParameter->next != NULL) {
+    if(currentParameter != NULL) {
         SemanticError("Missing parameters for function call");
     }
 
-    if(currentNode->next != NULL) {
+    if(currentNode != NULL) {
         SemanticError("Too many parameters for function call");
     }
+}
+
+void processArgumentByValue(ParameterDescriptorPtr expectedParameter, TreeNodePtr node) {
+    TypeDescriptorPtr expressionType = processExpression(node);
+
+    if(!equivalentTypes(expectedParameter->type, expressionType)) {
+        SemanticError("Wrong parameter type on function");
+    }
+}
+
+// Arguments by reference can only be a variable or array position
+void processArgumentByReference(ParameterDescriptorPtr expectedParameter, TreeNodePtr node) {
+    TreeNodePtr valueNode = getVariableExpression(node);
+    Value value = processValue(valueNode);
+
+    if(!equivalentTypes(expectedParameter->type, value.type)) {
+        SemanticError("Wrong parameter type on function");
+    }
+
+    switch (value.category) {
+        case ARRAY_VALUE:
+        case ARRAY_REFERENCE:
+            // process value already left the address on top of the stack
+            break;
+        case REFERENCE:
+            addCommand("      LDVL   %d,%d", value.level, value.content.displacement);
+            break;
+        case VALUE:
+            addCommand("      LADR   %d,%d", value.level, value.content.displacement);
+            break;
+        case CONSTANT:
+            SemanticError("Can't pass constant by reference");
+            break;
+    }
+}
+
+void processArgumentByFunctionAsParameter(ParameterDescriptorPtr expectedParameter, TreeNodePtr node) {
+
+    TreeNodePtr valueNode = getVariableExpression(node);
+
+    TreeNodePtr identifierNode = valueNode->subtrees[0];
+    char* identifier = processIdentifier(identifierNode);
+    SymbolTableEntryPtr valueEntry = findIdentifier(getSymbolTable(), identifier);
+
+    switch (valueEntry->category) {
+        case FUNCTION_SYMBOL: {
+            processDeclaredFunctionAsArgument(expectedParameter, valueEntry);
+            break;
+        }
+        case PARAMETER_SYMBOL: {
+            processFunctionParameterAsArgument(expectedParameter, valueEntry);
+            break;
+        }
+        default:
+            SemanticError("Expected function as parameter");
+    }
+
+    TreeNodePtr arrayIndexNode = valueNode->subtrees[1];
+    if(arrayIndexNode != NULL) {
+        SemanticError("Trying to index function identifier");
+    }
+}
+
+void processDeclaredFunctionAsArgument(ParameterDescriptorPtr expectedParameter, SymbolTableEntryPtr valueEntry) {
+
+    if(!equivalentTypes(expectedParameter->type, valueEntry->description.typeDescriptor)) {
+        SemanticError("Wrong parameter type on function");
+    }
+
+    addCommand("      LGAD   %s,%d",
+               valueEntry->description.functionDescriptor->mepaLabel,
+               valueEntry->level - 1);
+}
+
+void processFunctionParameterAsArgument(ParameterDescriptorPtr expectedParameter, SymbolTableEntryPtr valueEntry) {
+
+    ParameterDescriptorPtr argumentDescriptor = valueEntry->description.parameterDescriptor;
+
+    if (argumentDescriptor->type->category != FUNCTION_TYPE) {
+        SemanticError("Expected function as parameter");
+    }
+
+    if(!equivalentTypes(expectedParameter->type, argumentDescriptor->type)) {
+        SemanticError("Wrong parameter type on function");
+    }
+
+    // generalized address is already on the stack as the current function parameter
+    // load the MEPA address
+    addCommand("      LDVL   %s,%d", valueEntry->level, argumentDescriptor->displacement);
+    // load the value of the base register D[k]
+    addCommand("      LDVL   %s,%d", valueEntry->level, argumentDescriptor->displacement + 1);
+    // load the level k
+    addCommand("      LDVL   %s,%d", valueEntry->level, argumentDescriptor->displacement + 2);
 }
 
 /* If the expression is not a single factor, then it is a semantic error */
