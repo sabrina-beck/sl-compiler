@@ -174,9 +174,9 @@ unlabeled_statement         : assignment
                             | empty_statement
                             ;
 
-assignment                  : variable ASSIGN expression SEMI_COLON { addTreeNode(ASSIGNMENT_NODE, 2); }
+assignment                  : value ASSIGN expression SEMI_COLON { addTreeNode(ASSIGNMENT_NODE, 2); }
                             ;
-variable                    : identifier array_index_list { addTreeNode(VARIABLE_NODE, 2); }
+value                       : identifier array_index_list { addTreeNode(VARIABLE_NODE, 2); }
                             ;
 array_index_list            : { addEmpty(); }
                             | array_index array_index_list { addSequence(); }
@@ -233,7 +233,7 @@ multiplicative_operation    : { addEmpty(); }
                             | multiplicative_operator factor multiplicative_operation { addTreeNode(MULTIPLICATIVE_OPERATION_NODE, 3); }
                             ;
 
-factor                      : variable { addTreeNode(FACTOR_NODE, 1); }
+factor                      : value { addTreeNode(FACTOR_NODE, 1); }
                             | integer { addTreeNode(FACTOR_NODE, 1); }
                             | function_call { addTreeNode(FACTOR_NODE, 1); }
                             | OPEN_PAREN expression CLOSE_PAREN { addTreeNode(FACTOR_NODE, 1); }

@@ -139,15 +139,15 @@ typedef enum {
     ADDRESS,
     VALUE,
     ARRAY
-} VariableCategory;
+} ValueCategory;
 
 typedef struct {
-    VariableCategory category;
+    ValueCategory category;
     TypeDescriptorPtr type;
     int level;
     int displacement;
     int value;
-} Variable, *VariablePtr;
+} Value;
 
 /****
  *
