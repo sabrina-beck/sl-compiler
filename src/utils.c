@@ -197,18 +197,18 @@ SymbolTableEntryPtr addFunction(SymbolTablePtr symbolTable, FunctionHeaderPtr fu
     return symbol;
 }
 
-SymbolTableEntryPtr newLabel(int level, char* identifier) {
+void addLabel(SymbolTablePtr symbolTable, char* identifier) {
     LabelDescriptorPtr labelDescriptor = malloc(sizeof(LabelDescriptor));
     labelDescriptor->mepaLabel = nextMEPALabel();
     labelDescriptor->defined = false;
 
     SymbolTableEntryPtr symbol = malloc(sizeof(SymbolTableEntry));
     symbol->category = LABEL_SYMBOL;
-    symbol->level = level;
+    symbol->level = currentFunctionLevel;
     symbol->identifier = identifier;
     symbol->description.labelDescriptor = labelDescriptor;
 
-    return symbol;
+    addSymbolTableEntry(symbolTable, symbol);
 }
 
 

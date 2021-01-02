@@ -158,8 +158,8 @@ FunctionDescriptorPtr findCurrentFunctionDescriptor(SymbolTablePtr symbolTable, 
 
 TypeDescriptorPtr newFunctionType(FunctionHeaderPtr functionHeader);
 SymbolTableEntryPtr addFunction(SymbolTablePtr symbolTable, FunctionHeaderPtr functionHeader);
+void addLabel(SymbolTablePtr symbolTable, char* identifier);
 
-SymbolTableEntryPtr newLabel(int level, char* identifier);
 SymbolTableEntryPtr newType(int level, char* identifier, TypeDescriptorPtr typeDescriptor);
 SymbolTableEntryPtr newVariable(int level, char* identifier, int displacement, TypeDescriptorPtr typeDescriptor);
 TypeDescriptorPtr newArrayType(int size, int dimension, TypeDescriptorPtr elementType);

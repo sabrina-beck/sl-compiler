@@ -166,23 +166,18 @@ void processBlock(TreeNodePtr node) {
         UnexpectedNodeCategoryError(BLOCK_NODE, node->category);
     }
 
-    TreeNodePtr labelsNode = node->subtrees[0];
-    processLabels(labelsNode);
+    processLabels(node->subtrees[0]);
 
-    TreeNodePtr typesNode = node->subtrees[1];
-    processTypes(typesNode);
+    processTypes(node->subtrees[1]);
 
-    TreeNodePtr variablesNode = node->subtrees[2];
-    int allocatedSizeForVariables = processVariables(variablesNode);
+    int allocatedSizeForVariables = processVariables(node->subtrees[2]);
     if(allocatedSizeForVariables > 0) {
         addCommand("      ALOC   %d", allocatedSizeForVariables);
     }
 
-    TreeNodePtr functionsNode = node->subtrees[3];
-    processFunctions(functionsNode);
+    processFunctions(node->subtrees[3]);
 
-    TreeNodePtr bodyNode = node->subtrees[4];
-    processBody(bodyNode, allocatedSizeForVariables);
+    processBody(node->subtrees[4], allocatedSizeForVariables);
 
     if(allocatedSizeForVariables > 0) {
         addCommand("      DLOC   %d", allocatedSizeForVariables);
@@ -198,14 +193,14 @@ void processLabels(TreeNodePtr node) {
         UnexpectedNodeCategoryError(LABELS_NODE, node->category);
     }
 
-    TreeNodePtr identifiersNode = node->subtrees[0];
-    Queue* identifiers = processIdentifiersAsQueue(identifiersNode);
-    while (identifiers->front != NULL) {
-        char* identifier = (char*) dequeue(identifiers);
-        SymbolTableEntryPtr labelEntry = newLabel(getFunctionLevel(), identifier);
-        addSymbolTableEntry(getSymbolTable(), labelEntry);
+    TreeNodePtr identifierNode = node->subtrees[0];
+    while(identifierNode != NULL) {
+
+        char* identifier = processIdentifier(identifierNode);
+        addLabel(getSymbolTable(), identifier);
+
+        identifierNode = identifierNode->next;
     }
-    free(identifiers);
 }
 
 void processTypes(TreeNodePtr node) {
