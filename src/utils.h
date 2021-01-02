@@ -84,6 +84,7 @@ typedef struct {
     int returnDisplacement;
     TypeDescriptorPtr returnType;
     ParameterDescriptorsListPtr parameters;
+    TypeDescriptorPtr functionType;
 } FunctionDescriptor, *FunctionDescriptorPtr;
 
 typedef struct {

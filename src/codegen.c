@@ -52,7 +52,6 @@ void processFunction(TreeNodePtr node) {
     addCommand("%s:   ENFN   %d",
                entry->description.functionDescriptor->mepaLabel,
                entry->level);
-
     processBlock(node->subtrees[1]);
 
     addCommand("      RTRN   %d", entry->description.functionDescriptor->parametersSize);
@@ -773,7 +772,7 @@ void processArgumentByFunctionAsParameter(ParameterDescriptorPtr expectedParamet
 
 void processDeclaredFunctionAsArgument(ParameterDescriptorPtr expectedParameter, SymbolTableEntryPtr valueEntry) {
 
-    if(!equivalentTypes(expectedParameter->type, valueEntry->description.typeDescriptor)) {
+    if(!equivalentTypes(expectedParameter->type, valueEntry->description.functionDescriptor->functionType)) {
         SemanticError("Wrong parameter type on function");
     }
 

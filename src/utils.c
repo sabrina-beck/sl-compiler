@@ -219,6 +219,7 @@ SymbolTableEntryPtr addFunction(SymbolTablePtr symbolTable, FunctionHeaderPtr fu
     functionDescriptor->parametersSize = totalParametersSize(functionHeader->parameters);
     functionDescriptor->returnType = functionHeader->returnType;
     functionDescriptor->parameters = addParameterEntries(symbolTable, functionHeader->parameters);
+    functionDescriptor->functionType = newFunctionType(functionHeader);
 
     if(functionHeader->parameters == NULL) {
         functionDescriptor->returnDisplacement = FUNCTION_PARAMETERS_DISPLACEMENT;
@@ -231,7 +232,6 @@ SymbolTableEntryPtr addFunction(SymbolTablePtr symbolTable, FunctionHeaderPtr fu
     symbol->level = ++currentFunctionLevel;
     symbol->identifier = functionHeader->name;
     symbol->description.functionDescriptor = functionDescriptor;
-    symbol->description.typeDescriptor = newFunctionType(functionHeader);
 
     addSymbolTableEntry(symbolTable, symbol);
 
