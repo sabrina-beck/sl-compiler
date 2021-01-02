@@ -504,12 +504,11 @@ void processAssignment(TreeNodePtr node) {
 
 // if it is an indexed array, the position address will be on top of the stack (exec time)
 Value processValue(TreeNodePtr node) {
-    if(node->category != VARIABLE_NODE) {
-        UnexpectedNodeCategoryError(VARIABLE_NODE, node->category);
+    if(node->category != VALUE_NODE) {
+        UnexpectedNodeCategoryError(VALUE_NODE, node->category);
     }
 
-    TreeNodePtr identifierNode = node->subtrees[0];
-    char* identifier = processIdentifier(identifierNode);
+    char* identifier = processIdentifier(node->subtrees[0]);
     SymbolTableEntryPtr entry = findIdentifier(getSymbolTable(), identifier);
 
     Value value;
@@ -826,8 +825,8 @@ TreeNodePtr getVariableExpression(TreeNodePtr node) {
         variableNode = getVariableExpression(variableNode);
     }
 
-    if(variableNode->category != VARIABLE_NODE) {
-        UnexpectedNodeCategoryError(VARIABLE_NODE, variableNode->category);
+    if(variableNode->category != VALUE_NODE) {
+        UnexpectedNodeCategoryError(VALUE_NODE, variableNode->category);
     }
 
     return variableNode;
@@ -1117,7 +1116,7 @@ TypeDescriptorPtr processFactor(TreeNodePtr node) {
 
     TreeNodePtr specificFactorNode = node->subtrees[0];
     switch (specificFactorNode->category) {
-        case VARIABLE_NODE: {
+        case VALUE_NODE: {
             Value value = processValue(specificFactorNode);
             switch (value.category) {
                 case ARRAY:

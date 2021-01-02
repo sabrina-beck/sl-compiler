@@ -176,7 +176,7 @@ unlabeled_statement         : assignment
 
 assignment                  : value ASSIGN expression SEMI_COLON { addTreeNode(ASSIGNMENT_NODE, 2); }
                             ;
-value                       : identifier array_index_list { addTreeNode(VARIABLE_NODE, 2); }
+value                       : identifier array_index_list { addTreeNode(VALUE_NODE, 2); }
                             ;
 array_index_list            : { addEmpty(); }
                             | array_index array_index_list { addSequence(); }

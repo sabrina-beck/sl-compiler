@@ -226,8 +226,8 @@ const char *getCategoryName(NodeCategory category) {
 
         case ASSIGNMENT_NODE:
             return "ASSIGNMENT_NODE";
-        case VARIABLE_NODE:
-            return "VARIABLE_NODE";
+        case VALUE_NODE:
+            return "VALUE_NODE";
         case ARRAY_INDEX_NODE:
             return "ARRAY_INDEX_NODE";
 

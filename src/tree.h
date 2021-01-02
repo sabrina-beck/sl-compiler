@@ -30,7 +30,7 @@ typedef enum {
     LABEL_NODE,
 
     ASSIGNMENT_NODE,
-    VARIABLE_NODE,
+    VALUE_NODE,
     ARRAY_INDEX_NODE,
 
     FUNCTION_CALL_NODE,
