@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#define FUNCTION_PARAMETERS_DISPLACEMENT -5;
+
 bool equivalentParameters(List* params1, List* params2);
 
 /** Symbol table auxiliary functions **/
@@ -14,9 +16,40 @@ SymbolTableEntryPtr newPseudoFunction(int level, char* identifier, PseudoFunctio
 int mepaLabelCounter = 0;
 int countDigits(int number);
 
+/** Level counter **/
+int currentFunctionLevel = 0;
+
 /**
  * Interface functions implementation
  **/
+
+ParameterPtr concatenateParameters(ParameterPtr parameters1, ParameterPtr parameters2) {
+    if(parameters1 == NULL) {
+        return parameters2;
+    }
+
+    if(parameters2 == NULL) {
+        return parameters1;
+    }
+
+    ParameterPtr current = parameters1;
+    while (current->next != NULL) {
+        current = current->next;
+    }
+    current->next = parameters2;
+
+    return parameters1;
+}
+
+int totalParametersSize(ParameterPtr parameter) {
+    int size = 0;
+    ParameterPtr current = parameter;
+    while (current != NULL) {
+        size += current->type->size;
+        current = current->next;
+    }
+    return size;
+}
 
 SymbolTablePtr initializeSymbolTable() {
 
@@ -81,58 +114,85 @@ FunctionDescriptorPtr findCurrentFunctionDescriptor(SymbolTablePtr symbolTable, 
     return entry->description.functionDescriptor;
 }
 
-SymbolTableEntryPtr newParameter(int level, char* identifier, int displacement, TypeDescriptorPtr type, ParameterPassage parameterPassage) {
+SymbolTableEntryPtr newParameter(ParameterPtr parameter, int displacement) {
     ParameterDescriptorPtr parameterDescriptor = malloc(sizeof(ParameterDescriptorPtr));
     parameterDescriptor->displacement = displacement;
-    parameterDescriptor->type = type;
-    parameterDescriptor->parameterPassage = parameterPassage;
+    parameterDescriptor->type = parameter->type;
+    parameterDescriptor->parameterPassage = parameter->passage;
 
     SymbolTableEntryPtr symbol = malloc(sizeof(SymbolTableEntry));
     symbol->category = PARAMETER_SYMBOL;
-    symbol->level = level;
-    symbol->identifier = identifier;
+    symbol->level = currentFunctionLevel;
+    symbol->identifier = parameter->name;
     symbol->description.parameterDescriptor = parameterDescriptor;
 
     return symbol;
 }
 
-SymbolTableEntryPtr newFunctionParameter(SymbolTableEntryPtr functionEntry, int displacement) {
-    if (functionEntry->category != FUNCTION_SYMBOL) {
-        fprintf(stderr, "Expected function entry for new function parameter!");
-        exit(0);
+List* newParameterEntries(ParameterPtr parameters) {
+    List* list = newList();
+
+    ParameterPtr current = parameters;
+    int displacement = FUNCTION_PARAMETERS_DISPLACEMENT;
+    while(current != NULL) {
+        SymbolTableEntryPtr parameterEntry = newParameter(parameters, displacement);
+        add(list, parameterEntry); // invert the list again, so the parameters order is correct
+
+        displacement -= parameterEntry->description.parameterDescriptor->type->size;
+        current = current->next;
     }
 
-    FunctionDescriptorPtr functionDescriptor = functionEntry->description.functionDescriptor;
+    return list;
+}
 
+List* addParameterEntries(SymbolTablePtr symbolTable, ParameterPtr parameters) {
+    List* entries = newParameterEntries(parameters);
+
+    LinkedNode* current = entries->front;
+    while(current != NULL) {
+        SymbolTableEntryPtr symbol = (SymbolTableEntryPtr) current->data;
+        addSymbolTableEntry(symbolTable, symbol);
+
+        current = current->next;
+    }
+
+    return entries;
+}
+
+TypeDescriptorPtr newFunctionType(FunctionHeaderPtr functionHeader) {
     FunctionTypeDescriptorPtr functionTypeDescriptor = malloc(sizeof(FunctionTypeDescriptor));
-    functionTypeDescriptor->params = functionDescriptor->params;
-    functionTypeDescriptor->returnType = functionDescriptor->returnType;
+    functionTypeDescriptor->params = newParameterEntries(functionHeader->parameters); // FIXME
+    functionTypeDescriptor->returnType = functionHeader->returnType;
 
     TypeDescriptorPtr type = malloc(sizeof(TypeDescriptorPtr));
     type->category = FUNCTION_TYPE;
     type->size = 3; // generalized address
     type->description.functionTypeDescriptor = functionTypeDescriptor;
 
-    return newParameter(functionEntry->level, functionEntry->identifier, displacement, type, FUNCTION_PARAMETER);
+    return type;
 }
 
-SymbolTableEntryPtr newFunctionDescriptor(int level, char* identifier, TypeDescriptorPtr returnType, List* paramEntries) {
+SymbolTableEntryPtr addFunction(SymbolTablePtr symbolTable, FunctionHeaderPtr functionHeader) {
+
     FunctionDescriptorPtr functionDescriptor = malloc(sizeof(FunctionDescriptor));
     functionDescriptor->mepaLabel = nextMEPALabel();
     functionDescriptor->returnLabel = nextMEPALabel();
-    if(paramEntries == NULL) {
+    functionDescriptor->parametersSize = totalParametersSize(functionHeader->parameters);
+    if(functionHeader->parameters == NULL) {
         functionDescriptor->returnDisplacement = -5;
     } else {
-        functionDescriptor->returnDisplacement = -paramEntries->size - 5; // FIXME explain
+        functionDescriptor->returnDisplacement = -functionDescriptor->parametersSize - 5; // FIXME explain
     }
-    functionDescriptor->returnType = returnType;
-    functionDescriptor->params = paramEntries;
+    functionDescriptor->returnType = functionHeader->returnType;
+    functionDescriptor->params = addParameterEntries(symbolTable, functionHeader->parameters);
 
     SymbolTableEntryPtr symbol = malloc(sizeof(SymbolTableEntry));
     symbol->category = FUNCTION_SYMBOL;
-    symbol->level = level;
-    symbol->identifier = identifier;
+    symbol->level = ++currentFunctionLevel;
+    symbol->identifier = functionHeader->name;
     symbol->description.functionDescriptor = functionDescriptor;
+
+    addSymbolTableEntry(symbolTable, symbol);
 
     return symbol;
 }
@@ -202,13 +262,19 @@ void addSymbolTableEntry(SymbolTablePtr symbolTable, SymbolTableEntryPtr entry) 
     }
 }
 
-void changeToLevelScope(SymbolTablePtr symbolTablePtr, int level) {
+int getFunctionLevel() {
+    return currentFunctionLevel;
+}
+
+void endFunctionLevel(SymbolTablePtr symbolTablePtr) {
+    currentFunctionLevel--;
+
     Stack* auxStack = newStack();
 
     SymbolTableEntryPtr lastPoped = pop(symbolTablePtr->stack);
-    while (lastPoped != NULL && lastPoped->level > level) {
+    while (lastPoped != NULL && lastPoped->level > currentFunctionLevel) {
         if (lastPoped->category == FUNCTION_SYMBOL) {
-            if(lastPoped->level == level + 1) {
+            if(lastPoped->level == currentFunctionLevel + 1) {
                 push(auxStack, lastPoped);
             }
         }

@@ -1,3 +1,6 @@
+#ifndef UTILS_HEADER
+#define UTILS_HEADER
+
 #include <stdlib.h>
 
 #include "datastructures.h"
@@ -66,6 +69,7 @@ typedef struct _ParameterDescriptor {
 typedef struct {
     char* mepaLabel;
     char* returnLabel;
+    int parametersSize;
     int returnDisplacement;
     TypeDescriptorPtr returnType;
     List* params; // List of SymbolTableEntry of category PARAMETER_SYMBOL
@@ -107,20 +111,63 @@ typedef struct {
     TypeDescriptorPtr booleanTypeDescriptor;
 } SymbolTable, *SymbolTablePtr;
 
+/****
+ *
+ ****/
+
+struct _FunctionHeader;
+
+typedef struct _Parameter {
+    char* name;
+    ParameterPassage passage;
+    struct _Parameter* next;
+    TypeDescriptorPtr type;
+} Parameter, *ParameterPtr;
+
+typedef struct _FunctionHeader {
+    TypeDescriptorPtr returnType;
+    char* name;
+    ParameterPtr parameters;
+} FunctionHeader, *FunctionHeaderPtr;
+
+ParameterPtr concatenateParameters(ParameterPtr parameters1, ParameterPtr parameters2);
+
+typedef enum {
+    CONSTANT,
+    ADDRESS,
+    VALUE,
+    ARRAY
+} VariableCategory;
+
+typedef struct {
+    VariableCategory category;
+    TypeDescriptorPtr type;
+    int level;
+    int displacement;
+    int value;
+} Variable, *VariablePtr;
+
+/****
+ *
+ ****/
+
 SymbolTablePtr initializeSymbolTable();
 
 SymbolTableEntryPtr findIdentifier(SymbolTablePtr symbolTable, char* identifier);
 FunctionDescriptorPtr findCurrentFunctionDescriptor(SymbolTablePtr symbolTable, int level);
 
-SymbolTableEntryPtr newParameter(int level, char* identifier, int displacement, TypeDescriptorPtr type, ParameterPassage parameterPassage);
-SymbolTableEntryPtr newFunctionParameter(SymbolTableEntryPtr functionEntry, int displacement);
-SymbolTableEntryPtr newFunctionDescriptor(int level, char* identifier, TypeDescriptorPtr returnType, List* paramEntries); // list of parameters as SymbolTableEntryPtr
+TypeDescriptorPtr newFunctionType(FunctionHeaderPtr functionHeader);
+SymbolTableEntryPtr addFunction(SymbolTablePtr symbolTable, FunctionHeaderPtr functionHeader);
+
 SymbolTableEntryPtr newLabel(int level, char* identifier);
 SymbolTableEntryPtr newType(int level, char* identifier, TypeDescriptorPtr typeDescriptor);
 SymbolTableEntryPtr newVariable(int level, char* identifier, int displacement, TypeDescriptorPtr typeDescriptor);
 TypeDescriptorPtr newArrayType(int size, int dimension, TypeDescriptorPtr elementType);
 void addSymbolTableEntry(SymbolTablePtr symbolTable, SymbolTableEntryPtr entry);
-void changeToLevelScope(SymbolTablePtr symbolTablePtr, int level);
+
+int getFunctionLevel();
+void endFunctionLevel(SymbolTablePtr symbolTablePtr);
+
 
 int parametersTotalSize(SymbolTableEntryPtr entry); // entry of category FUNCTION_SYMBOL
 
@@ -132,3 +179,5 @@ char* nextMEPALabel();
 
 /* Debug */
 char* getSymbolTableCategoryName(SymbolTableCategory category);
+
+#endif
