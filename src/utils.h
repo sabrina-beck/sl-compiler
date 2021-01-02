@@ -69,6 +69,7 @@ typedef struct _ParameterDescriptor {
 typedef struct {
     char* mepaLabel;
     char* returnLabel;
+    int variablesDisplacement;
     int parametersSize;
     int returnDisplacement;
     TypeDescriptorPtr returnType;
@@ -107,6 +108,7 @@ typedef struct {
 
 typedef struct {
     Stack* stack;
+    FunctionDescriptorPtr mainFunctionDescriptor;
     TypeDescriptorPtr integerTypeDescriptor;
     TypeDescriptorPtr booleanTypeDescriptor;
 } SymbolTable, *SymbolTablePtr;
@@ -154,16 +156,17 @@ typedef struct {
 SymbolTablePtr initializeSymbolTable();
 
 SymbolTableEntryPtr findIdentifier(SymbolTablePtr symbolTable, char* identifier);
-FunctionDescriptorPtr findCurrentFunctionDescriptor(SymbolTablePtr symbolTable, int level);
+FunctionDescriptorPtr findCurrentFunctionDescriptor(SymbolTablePtr symbolTable);
 
 TypeDescriptorPtr newFunctionType(FunctionHeaderPtr functionHeader);
 TypeDescriptorPtr newArrayType(int dimension, TypeDescriptorPtr elementType);
 
+void addMainFunction(SymbolTablePtr symbolTable);
 SymbolTableEntryPtr addFunction(SymbolTablePtr symbolTable, FunctionHeaderPtr functionHeader);
 void addLabel(SymbolTablePtr symbolTable, char* identifier);
 void addType(SymbolTablePtr symbolTable, char* identifier, TypeDescriptorPtr typeDescriptor);
+void addVariable(SymbolTablePtr symbolTable, char* identifier, TypeDescriptorPtr typeDescriptor);
 
-SymbolTableEntryPtr newVariable(int level, char* identifier, int displacement, TypeDescriptorPtr typeDescriptor);
 void addSymbolTableEntry(SymbolTablePtr symbolTable, SymbolTableEntryPtr entry);
 
 int getFunctionLevel();

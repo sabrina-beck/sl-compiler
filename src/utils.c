@@ -102,10 +102,16 @@ bool byLastFunctionInLevel(void* data, void* secondParam) {
     return entry->category == FUNCTION_SYMBOL && entry->level == *level;
 }
 
-FunctionDescriptorPtr findCurrentFunctionDescriptor(SymbolTablePtr symbolTable, int level) {
-    SymbolTableEntryPtr entry = (SymbolTableEntryPtr) find(symbolTable->stack, &level, byLastFunctionInLevel);
+FunctionDescriptorPtr findCurrentFunctionDescriptor(SymbolTablePtr symbolTable) {
+    if(currentFunctionLevel == 0) {
+        return symbolTable->mainFunctionDescriptor;
+    }
+
+    SymbolTableEntryPtr entry = (SymbolTableEntryPtr) find(symbolTable->stack, &currentFunctionLevel, byLastFunctionInLevel);
+
     if(entry == NULL || entry->category != FUNCTION_SYMBOL) {
-        return NULL;
+        fprintf(stderr, "Expected current function descriptor\n");
+        exit(0);
     }
 
     return entry->description.functionDescriptor;
@@ -169,19 +175,37 @@ TypeDescriptorPtr newFunctionType(FunctionHeaderPtr functionHeader) {
     return type;
 }
 
+void addMainFunction(SymbolTablePtr symbolTable) {
+
+    FunctionDescriptorPtr functionDescriptor = malloc(sizeof(FunctionDescriptor));
+
+    functionDescriptor->variablesDisplacement = 0;
+    functionDescriptor->mepaLabel = NULL; // main can't be invoked
+    functionDescriptor->returnLabel = NULL; //FIXME return in the main function
+    functionDescriptor->parametersSize = 0;
+    functionDescriptor->params = NULL; // main has no parameters
+    functionDescriptor->returnDisplacement = -1; // main has no return
+    functionDescriptor->returnType = NULL; // VOID
+
+    symbolTable->mainFunctionDescriptor = functionDescriptor;
+}
+
 SymbolTableEntryPtr addFunction(SymbolTablePtr symbolTable, FunctionHeaderPtr functionHeader) {
 
     FunctionDescriptorPtr functionDescriptor = malloc(sizeof(FunctionDescriptor));
+
     functionDescriptor->mepaLabel = nextMEPALabel();
     functionDescriptor->returnLabel = nextMEPALabel();
+    functionDescriptor->variablesDisplacement = 0;
     functionDescriptor->parametersSize = totalParametersSize(functionHeader->parameters);
-    if(functionHeader->parameters == NULL) {
-        functionDescriptor->returnDisplacement = -5;
-    } else {
-        functionDescriptor->returnDisplacement = -functionDescriptor->parametersSize - 5; // FIXME explain
-    }
     functionDescriptor->returnType = functionHeader->returnType;
     functionDescriptor->params = addParameterEntries(symbolTable, functionHeader->parameters);
+
+    if(functionHeader->parameters == NULL) {
+        functionDescriptor->returnDisplacement = FUNCTION_PARAMETERS_DISPLACEMENT;
+    } else {
+        functionDescriptor->returnDisplacement = -functionDescriptor->parametersSize + FUNCTION_PARAMETERS_DISPLACEMENT;
+    }
 
     SymbolTableEntryPtr symbol = malloc(sizeof(SymbolTableEntry));
     symbol->category = FUNCTION_SYMBOL;
@@ -218,18 +242,27 @@ void addType(SymbolTablePtr symbolTable, char* identifier, TypeDescriptorPtr typ
     addSymbolTableEntry(symbolTable, symbol);
 }
 
-SymbolTableEntryPtr newVariable(int level, char* identifier, int displacement, TypeDescriptorPtr typeDescriptor) {
+void addVariable(SymbolTablePtr symbolTable, char* identifier, TypeDescriptorPtr typeDescriptor) {
+    FunctionDescriptorPtr functionDescriptor = findCurrentFunctionDescriptor(symbolTable);
+    if(functionDescriptor == NULL) {
+        fprintf(stderr, "addVariable: Expected current function descriptor\n");
+        exit(0);
+    }
+
     VariableDescriptorPtr variableDescriptor = malloc(sizeof(VariableDescriptor));
-    variableDescriptor->displacement = displacement;
+
+    variableDescriptor->displacement = functionDescriptor->variablesDisplacement;
+    functionDescriptor->variablesDisplacement += typeDescriptor->size;
+
     variableDescriptor->type = typeDescriptor;
 
     SymbolTableEntryPtr symbol = malloc(sizeof(SymbolTableEntry));
     symbol->category = VARIABLE_SYMBOL;
-    symbol->level = level;
+    symbol->level = currentFunctionLevel;
     symbol->identifier = identifier;
     symbol->description.variableDescriptor = variableDescriptor;
 
-    return symbol;
+    addSymbolTableEntry(symbolTable, symbol);
 }
 
 TypeDescriptorPtr newArrayType(int dimension, TypeDescriptorPtr elementType) {

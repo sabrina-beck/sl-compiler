@@ -12,7 +12,6 @@ SymbolTablePtr getSymbolTable();
 void processProgram(void *p) {
     TreeNodePtr treeRoot = (TreeNodePtr) p;
 
-
     processMainFunction(treeRoot);
 
     addCommand("      END ");
@@ -25,7 +24,15 @@ void processMainFunction(TreeNodePtr node) {
         UnexpectedNodeCategoryError(FUNCTION_NODE, node->category);
     }
 
-    processFunctionHeader(node->subtrees[0]);
+    FunctionHeaderPtr functionHeader = processFunctionHeader(node->subtrees[0]);
+    if(functionHeader->returnType != NULL) {
+        SemanticError("Main function should be void");
+    }
+    if(functionHeader->parameters != NULL) {
+        SemanticError("Main function shouldn't have any parameters");
+    }
+    addMainFunction(getSymbolTable());
+
     addCommand("      MAIN");
 
     processBlock(node->subtrees[1]);
@@ -170,17 +177,18 @@ void processBlock(TreeNodePtr node) {
 
     processTypes(node->subtrees[1]);
 
-    int allocatedSizeForVariables = processVariables(node->subtrees[2]);
-    if(allocatedSizeForVariables > 0) {
-        addCommand("      ALOC   %d", allocatedSizeForVariables);
+    processVariables(node->subtrees[2]);
+    FunctionDescriptorPtr functionDescriptor = findCurrentFunctionDescriptor(getSymbolTable());
+    if(functionDescriptor->variablesDisplacement > 0) {
+        addCommand("      ALOC   %d", functionDescriptor->variablesDisplacement);
     }
 
     processFunctions(node->subtrees[3]);
 
-    processBody(node->subtrees[4], allocatedSizeForVariables);
+    processBody(node->subtrees[4], functionDescriptor->variablesDisplacement);
 
-    if(allocatedSizeForVariables > 0) {
-        addCommand("      DLOC   %d", allocatedSizeForVariables);
+    if(functionDescriptor->variablesDisplacement > 0) {
+        addCommand("      DLOC   %d", functionDescriptor->variablesDisplacement);
     }
 }
 
@@ -231,9 +239,9 @@ void processTypeDeclaration(TreeNodePtr node) {
     addType(getSymbolTable(), identifier, type);
 }
 
-int processVariables(TreeNodePtr node) {
+void processVariables(TreeNodePtr node) {
     if(node == NULL) {
-        return 0;
+        return;
     }
 
     if(node->category != VARIABLES_NODE) {
@@ -241,34 +249,27 @@ int processVariables(TreeNodePtr node) {
     }
 
     TreeNodePtr variableDeclarationNode = node->subtrees[0];
-    int displacement = 0;
     while (variableDeclarationNode != NULL) {
-        processVariableDeclaration(variableDeclarationNode, &displacement);
+
+        processVariableDeclaration(variableDeclarationNode);
+
         variableDeclarationNode = variableDeclarationNode->next;
     }
-
-    return displacement;
 }
 
-void processVariableDeclaration(TreeNodePtr node, int* displacement) {
+void processVariableDeclaration(TreeNodePtr node) {
     if(node->category != DECLARATION_NODE) {
         UnexpectedNodeCategoryError(DECLARATION_NODE, node->category);
     }
 
-    TreeNodePtr identifiersNode = node->subtrees[0];
-    Queue* identifiers = processIdentifiersAsQueue(identifiersNode);
+    TypeDescriptorPtr type = processType(node->subtrees[1]);
 
-    TreeNodePtr typeNode = node->subtrees[1];
-    TypeDescriptorPtr type = processType(typeNode);
-
-    while (identifiers->front != NULL) {
-        char* identifier = dequeue(identifiers);
-        SymbolTableEntryPtr variableEntry = newVariable(getFunctionLevel(), identifier, *displacement, type);
-        addSymbolTableEntry(getSymbolTable(), variableEntry);
-        *displacement += type->size;
+    TreeNodePtr identifierNode = node->subtrees[0];
+    while(identifierNode != NULL) {
+        char* identifier = processIdentifier(identifierNode);
+        addVariable(getSymbolTable(), identifier, type);
+        identifierNode = identifierNode->next;
     }
-
-    free(identifiers);
 }
 
 void processFunctions(TreeNodePtr node) {
@@ -853,7 +854,7 @@ void processReturn(TreeNodePtr node) {
         UnexpectedNodeCategoryError(RETURN_NODE, node->category);
     }
 
-    FunctionDescriptorPtr functionDescriptor = findCurrentFunctionDescriptor(getSymbolTable(), getFunctionLevel());
+    FunctionDescriptorPtr functionDescriptor = findCurrentFunctionDescriptor(getSymbolTable());
     if(functionDescriptor == NULL) {
         SemanticError("Unexpected error, can't find current function descriptor");
     }

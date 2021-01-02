@@ -120,12 +120,12 @@ type_declaration            : identifier ASSIGN type SEMI_COLON { addTreeNode(TY
 variables_section           : { addEmpty(); }
                             | variables
                             ;
-variables                   : VARS declarations_list { addTreeNode(VARIABLES_NODE, 1); }
+variables                   : VARS variables_declaration_list { addTreeNode(VARIABLES_NODE, 1); }
                             ;
-declarations_list           : declaration SEMI_COLON
-                            | declaration SEMI_COLON declarations_list { addSequence(); }
+variables_declaration_list  : variable_declaration SEMI_COLON
+                            | variable_declaration SEMI_COLON variables_declaration_list { addSequence(); }
                             ;
-declaration                 : identifier_list COLON type { addTreeNode(DECLARATION_NODE, 2); }
+variable_declaration        : identifier_list COLON type { addTreeNode(DECLARATION_NODE, 2); }
                             ;
 
 functions_section           : { addEmpty(); }

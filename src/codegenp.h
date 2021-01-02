@@ -30,8 +30,8 @@ void processLabels(TreeNodePtr node);
 void processTypes(TreeNodePtr node);
 void processTypeDeclaration(TreeNodePtr node);
 
-int processVariables(TreeNodePtr node);
-void processVariableDeclaration(TreeNodePtr node, int* displacement);
+void processVariables(TreeNodePtr node);
+void processVariableDeclaration(TreeNodePtr node);
 
 void processFunctions(TreeNodePtr node);
 
