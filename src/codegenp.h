@@ -45,11 +45,11 @@ TypeDescriptorPtr processType(TreeNodePtr node);
 TypeDescriptorPtr processArraySizeDeclaration(TreeNodePtr node, TypeDescriptorPtr elementType);
 
 /* Body */
-void processBody(TreeNodePtr node, int allocatedSizeForVariables);
+void processBody(TreeNodePtr node);
 
-void processStatement(TreeNodePtr node, int allocatedSizeForVariables);
+void processStatement(TreeNodePtr node);
 
-void processLabel(TreeNodePtr node, int allocatedSizeForVariables);
+void processLabel(TreeNodePtr node);
 
 void processUnlabeledStatement(TreeNodePtr node);
 
@@ -87,6 +87,8 @@ TypeDescriptorPtr processUnaryOperator(TreeNodePtr node);
 TypeDescriptorPtr processMultiplicativeOperator(TreeNodePtr node);
 
 /** Error Handling **/
+void LabelAlreadyDefinedError(char* identifier);
+void UndeclaredLabelError(char* identifier);
 void UnexpectedSymbolEntryCategoryError(SymbolTableCategory expected, SymbolTableCategory gotten);
 void SymbolEntryCategoryError(char* expected, SymbolTableCategory gotten);
 void UnexpectedNodeCategoryError(NodeCategory expected, NodeCategory gotten);

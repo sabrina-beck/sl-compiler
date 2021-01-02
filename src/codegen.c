@@ -178,6 +178,7 @@ void processBlock(TreeNodePtr node) {
     processTypes(node->subtrees[1]);
 
     processVariables(node->subtrees[2]);
+
     FunctionDescriptorPtr functionDescriptor = findCurrentFunctionDescriptor(getSymbolTable());
     if(functionDescriptor->variablesDisplacement > 0) {
         addCommand("      ALOC   %d", functionDescriptor->variablesDisplacement);
@@ -185,7 +186,7 @@ void processBlock(TreeNodePtr node) {
 
     processFunctions(node->subtrees[3]);
 
-    processBody(node->subtrees[4], functionDescriptor->variablesDisplacement);
+    processBody(node->subtrees[4]);
 
     if(functionDescriptor->variablesDisplacement > 0) {
         addCommand("      DLOC   %d", functionDescriptor->variablesDisplacement);
@@ -375,37 +376,36 @@ TypeDescriptorPtr processArraySizeDeclaration(TreeNodePtr node, TypeDescriptorPt
 
 /* Body */
 
-void processBody(TreeNodePtr node, int allocatedSizeForVariables) {
+void processBody(TreeNodePtr node) {
     if(node->category != BODY_NODE) {
         UnexpectedNodeCategoryError(BODY_NODE, node->category);
     }
 
     TreeNodePtr statementNode = node->subtrees[0];
     while (statementNode != NULL) {
-        processStatement(statementNode, allocatedSizeForVariables);
+        processStatement(statementNode);
         statementNode = statementNode->next;
     }
 }
 
-void processStatement(TreeNodePtr node, int allocatedSizeForVariables) {
+void processStatement(TreeNodePtr node) {
     if(node->category != STATEMENT_NODE) {
         UnexpectedNodeCategoryError(STATEMENT_NODE, node->category);
     }
 
-    TreeNodePtr firstChild = node->subtrees[0];
-    if(firstChild->category != LABEL_NODE) {
-        processUnlabeledStatement(firstChild);
-        return;
+    TreeNodePtr labelNode = node->subtrees[0];
+    TreeNodePtr unlabeledStatementNode = node->subtrees[1];
+    if(labelNode->category != LABEL_NODE) {
+        unlabeledStatementNode = labelNode;
+        labelNode = NULL;
     }
 
-    processLabel(firstChild, allocatedSizeForVariables);
-
-    TreeNodePtr unlabeledStatamentNode = node->subtrees[1];
-    processUnlabeledStatement(unlabeledStatamentNode);
+    processLabel(labelNode);
+    processUnlabeledStatement(unlabeledStatementNode);
 
 }
 
-void processLabel(TreeNodePtr node, int allocatedSizeForVariables) {
+void processLabel(TreeNodePtr node) {
     if(node == NULL) {
         return;
     }
@@ -414,12 +414,11 @@ void processLabel(TreeNodePtr node, int allocatedSizeForVariables) {
         UnexpectedNodeCategoryError(LABEL_NODE, node->category);
     }
 
-    TreeNodePtr identifierNode = node->subtrees[0];
-    char* identifier = processIdentifier(identifierNode);
-
+    char* identifier = processIdentifier(node->subtrees[0]);
     SymbolTableEntryPtr symbolTableEntry = findIdentifier(getSymbolTable(), identifier);
+
     if(symbolTableEntry == NULL) {
-        SemanticError("Label not declared");
+        UndeclaredLabelError(identifier);
     }
 
     if(symbolTableEntry->category != LABEL_SYMBOL) {
@@ -427,7 +426,7 @@ void processLabel(TreeNodePtr node, int allocatedSizeForVariables) {
     }
 
     if(symbolTableEntry->description.labelDescriptor->defined) {
-        SemanticError("Label already used");
+        LabelAlreadyDefinedError(identifier);
     }
 
     LabelDescriptorPtr labelDescriptor = symbolTableEntry->description.labelDescriptor;
@@ -435,7 +434,12 @@ void processLabel(TreeNodePtr node, int allocatedSizeForVariables) {
 
     // since there are only statements at this level, the current activation record displacement on the stack
     // will always be equal to the size of its alocated variables
-    addCommand("%s:   ENLB   %d,%d        %s:", labelDescriptor->mepaLabel, symbolTableEntry->level, allocatedSizeForVariables, identifier);
+    FunctionDescriptorPtr functionDescriptor = findCurrentFunctionDescriptor(getSymbolTable());
+    addCommand("%s:   ENLB   %d,%d        %s:",
+               labelDescriptor->mepaLabel,
+               symbolTableEntry->level,
+               functionDescriptor->variablesDisplacement,
+               identifier);
 }
 
 void processUnlabeledStatement(TreeNodePtr node) {
@@ -1267,6 +1271,17 @@ TypeDescriptorPtr processMultiplicativeOperator(TreeNodePtr node) {
 }
 
 /** Semantic Errors handling functions **/
+void LabelAlreadyDefinedError(char* identifier) {
+    char message[255];
+    sprintf(message, "Can't define label %s again", identifier);
+    SemanticError(message);
+}
+
+void UndeclaredLabelError(char* identifier) {
+    char message[255];
+    sprintf(message, "Undeclared label %s", identifier);
+    SemanticError(message);
+}
 
 void UnexpectedSymbolEntryCategoryError(SymbolTableCategory expected, SymbolTableCategory gotten) {
     char message[100];
