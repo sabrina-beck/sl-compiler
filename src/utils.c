@@ -98,7 +98,7 @@ SymbolTableEntryPtr newParameter(int level, char* identifier, int displacement, 
 
 SymbolTableEntryPtr newFunctionParameter(SymbolTableEntryPtr functionEntry, int displacement) {
     if (functionEntry->category != FUNCTION_SYMBOL) {
-        fprintf(stderr, "Expected function entry!");
+        fprintf(stderr, "Expected function entry for new function parameter!");
         exit(0);
     }
 
@@ -129,7 +129,7 @@ SymbolTableEntryPtr newFunctionDescriptor(int level, char* identifier, TypeDescr
     functionDescriptor->params = paramEntries;
 
     SymbolTableEntryPtr symbol = malloc(sizeof(SymbolTableEntry));
-    symbol->category = CONSTANT_SYMBOL;
+    symbol->category = FUNCTION_SYMBOL;
     symbol->level = level;
     symbol->identifier = identifier;
     symbol->description.functionDescriptor = functionDescriptor;
@@ -226,7 +226,8 @@ void changeToLevelScope(SymbolTablePtr symbolTablePtr, int level) {
 
 int parametersTotalSize(SymbolTableEntryPtr entry) {
     if (entry->category != FUNCTION_SYMBOL) {
-        fprintf(stderr, "Expected function entry!");
+        fprintf(stderr, "parametersTotalSize: Expected %s, got: %s\n",
+                getSymbolTableCategoryName(FUNCTION_SYMBOL), getSymbolTableCategoryName(entry->category));
         exit(0);
     }
 
