@@ -213,6 +213,7 @@ ParameterDescriptorsListPtr addParameterEntries(SymbolTablePtr symbolTable, Para
 }
 
 SymbolTableEntryPtr addFunction(SymbolTablePtr symbolTable, FunctionHeaderPtr functionHeader) {
+    currentFunctionLevel++;
 
     FunctionDescriptorPtr functionDescriptor = malloc(sizeof(FunctionDescriptor));
 

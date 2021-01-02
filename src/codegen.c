@@ -1011,26 +1011,23 @@ TypeDescriptorPtr processExpression(TreeNodePtr node) {
         UnexpectedNodeCategoryError(EXPRESSION_NODE, node->category);
     }
 
-    TreeNodePtr childExprNode = node->subtrees[0];
+    TreeNodePtr firstExprNode = node->subtrees[0];
     TreeNodePtr relationalOperatorNode = node->subtrees[1];
-    TreeNodePtr binaryopExprNode = node->subtrees[2];
+    TreeNodePtr binaryOpExprNode = node->subtrees[2];
 
-    TypeDescriptorPtr firstExprType = routeExpressionSubtree(childExprNode);
-    if (relationalOperatorNode == NULL) {
-        return firstExprType;
+    if(relationalOperatorNode == NULL) {
+        return routeExpressionSubtree(firstExprNode);
     }
 
-    TypeDescriptorPtr secondExprType = processBinaryOpExpression(binaryopExprNode);
+    TypeDescriptorPtr secondExprType = processBinaryOpExpression(binaryOpExprNode);
+    TypeDescriptorPtr firstExprType = routeExpressionSubtree(firstExprNode);
     TypeDescriptorPtr operatorType = processRelationalOperator(relationalOperatorNode);
 
     if(!equivalentTypes(firstExprType, secondExprType)) {
         SemanticError("Expressions of incompatible type");
     }
 
-    if(operatorType != NULL) {
-        return operatorType;
-    }
-    return firstExprType;
+    return operatorType;
 }
 
 TypeDescriptorPtr routeExpressionSubtree(TreeNodePtr node) {
