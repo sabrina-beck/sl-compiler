@@ -130,7 +130,11 @@ ParameterDescriptorsListPtr newParameterDescriptorsRec(ParameterPtr parameter, i
     ParameterDescriptorsListPtr parameterDescriptor = malloc(sizeof(ParameterDescriptorsList));
     parameterDescriptor->descriptor = newParameterDescriptor(parameter, *displacement);
 
-    *displacement -= parameterDescriptor->descriptor->type->size;
+    if(parameter->passage == VARIABLE_PARAMETER) {
+        *displacement -= 1;
+    } else {
+        *displacement -= parameterDescriptor->descriptor->type->size;
+    }
 
     ParameterDescriptorsListPtr nextParameters = newParameterDescriptorsRec(parameter->next, displacement);
     parameterDescriptor->next = nextParameters;
