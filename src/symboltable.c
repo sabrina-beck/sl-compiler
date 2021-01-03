@@ -32,7 +32,9 @@ SymbolTablePtr getSymbolTable() {
     return symbolTable;
 }
 
-
+/*
+ * The accessible symbol for an identifier is the last one pushed on the stack (symbol table) with this identifier
+ */
 bool byIdentifierPredicate(void* data, void* secondParam) {
     SymbolTableEntryPtr entry = (SymbolTableEntryPtr) data;
     char* identifier = (char*) secondParam;
@@ -45,12 +47,16 @@ SymbolTableEntryPtr findIdentifier(char* identifier) {
     return (SymbolTableEntryPtr) find(getSymbolTable()->stack, identifier, byIdentifierPredicate);
 }
 
+/*
+ * The function being currently compiled is the last function entry in the symbol table
+ */
 bool byLastFunctionInLevel(void* data, void* secondParam) {
     SymbolTableEntryPtr entry = (SymbolTableEntryPtr) data;
     int* level = (int*) secondParam;
     return entry->category == FUNCTION_SYMBOL && entry->level == *level;
 }
 FunctionDescriptorPtr findCurrentFunctionDescriptor() {
+    // Level 0 is the main function and the main function is not on the stack since its identifier is not accessible
     if(currentFunctionLevel == 0) {
         return getSymbolTable()->mainFunctionDescriptor;
     }
@@ -58,7 +64,7 @@ FunctionDescriptorPtr findCurrentFunctionDescriptor() {
     SymbolTableEntryPtr entry = (SymbolTableEntryPtr) find(getSymbolTable()->stack, &currentFunctionLevel, byLastFunctionInLevel);
 
     if(entry == NULL || entry->category != FUNCTION_SYMBOL) {
-        fprintf(stderr, "Expected current function descriptor\n");
+        fprintf(stderr, "Expected current function descriptor but got a %s\n", getSymbolTableCategoryName(entry->category));
         exit(0);
     }
 
@@ -90,24 +96,25 @@ TypeDescriptorPtr newArrayType(int dimension, TypeDescriptorPtr elementType) {
     typeDescriptor->description.arrayDescriptor = arrayDescriptor;
 
     return typeDescriptor;
-
 }
 
 
 SymbolTableEntryPtr addFunction(FunctionHeaderPtr functionHeader) {
+    // Since it is a new function being compiled, the level increased
     currentFunctionLevel++;
 
     FunctionDescriptorPtr functionDescriptor = malloc(sizeof(FunctionDescriptor));
 
     functionDescriptor->headerMepaLabel = nextMEPALabel();
     functionDescriptor->returnMepaLabel = nextMEPALabel();
-    functionDescriptor->bodyMepaLabel = -1;
+    functionDescriptor->bodyMepaLabel = -1; // this label is only created if needed
     functionDescriptor->variablesDisplacement = 0;
     functionDescriptor->parametersSize = totalParametersSize(functionHeader->parameters);
     functionDescriptor->returnType = functionHeader->returnType;
     functionDescriptor->parameters = inverseParametersDescriptors(addParameterEntries(functionHeader->parameters));
     functionDescriptor->functionType = newFunctionType(functionHeader);
 
+    // updates return displacement only if the function has a return type
     if(functionHeader->returnType != NULL) {
         if(functionHeader->parameters == NULL) {
             functionDescriptor->returnDisplacement =  - functionHeader->returnType->size + 1 + FUNCTION_PARAMETERS_DISPLACEMENT;
@@ -134,12 +141,12 @@ FunctionDescriptorPtr addMainFunction() {
 
     functionDescriptor->variablesDisplacement = 0;
     functionDescriptor->headerMepaLabel = -1; // main can't be invoked
-    functionDescriptor->returnMepaLabel = -1;
-    functionDescriptor->bodyMepaLabel = -1;
-    functionDescriptor->parametersSize = 0;
+    functionDescriptor->returnMepaLabel = -1; // main can't have a return
+    functionDescriptor->bodyMepaLabel = -1; // this label is only created if needed
     functionDescriptor->parameters = NULL; // main has no parameters
-    functionDescriptor->returnDisplacement = -1; // main has no return
-    functionDescriptor->returnType = NULL; // VOID
+    functionDescriptor->parametersSize = 0;
+    functionDescriptor->returnType = NULL; // main has no return, it must be VOID
+    functionDescriptor->returnDisplacement = -1;
 
     getSymbolTable()->mainFunctionDescriptor = functionDescriptor;
 
@@ -196,14 +203,16 @@ void addVariable(char* identifier, TypeDescriptorPtr typeDescriptor) {
 /* Private implementations */
 
 TypeDescriptorPtr newPredefinedTypeDescriptor(int size, PredefinedType predefinedType) {
+
     TypeDescriptorPtr predefinedTypeDescriptor = malloc(sizeof(TypeDescriptor));
     predefinedTypeDescriptor->category = PREDEFINED_TYPE;
     predefinedTypeDescriptor->size = size;
     predefinedTypeDescriptor->description.predefinedType = predefinedType;
+
     return predefinedTypeDescriptor;
 }
 
-SymbolTableEntryPtr newConstant(int level, char* identifier, int value, TypeDescriptorPtr typeDescriptor) {
+void addConstant(int level, char* identifier, int value, TypeDescriptorPtr typeDescriptor) {
     ConstantDescriptorPtr constantDescriptor = malloc(sizeof(ConstantDescriptor));
     constantDescriptor->value = value;
     constantDescriptor->type = typeDescriptor;
@@ -214,17 +223,17 @@ SymbolTableEntryPtr newConstant(int level, char* identifier, int value, TypeDesc
     symbol->identifier = identifier;
     symbol->description.constantDescriptor = constantDescriptor;
 
-    return symbol;
+    addSymbolTableEntry(symbol);
 }
 
-SymbolTableEntryPtr newPseudoFunction(int level, char* identifier, PseudoFunction pseudoFunction) {
+void addPseudoFunction(int level, char* identifier, PseudoFunction pseudoFunction) {
     SymbolTableEntryPtr symbol = malloc(sizeof(SymbolTableEntry));
     symbol->category = PSEUDO_FUNCTION_SYMBOL;
     symbol->level = level;
     symbol->identifier = identifier;
     symbol->description.pseudoFunction = pseudoFunction;
 
-    return symbol;
+    addSymbolTableEntry(symbol);
 }
 
 void initializeSymbolTable() {
@@ -243,18 +252,12 @@ void initializeSymbolTable() {
     addType("boolean", booleanTypeDescriptor);
 
     /* predefined constants */
-    SymbolTableEntryPtr falseEntry = newConstant(0, "false", 0, booleanTypeDescriptor);
-    push(symbolTable->stack, falseEntry);
-
-    SymbolTableEntryPtr trueEntry = newConstant(0, "true", 1, booleanTypeDescriptor);
-    push(symbolTable->stack, trueEntry);
+    addConstant(0, "false", 0, booleanTypeDescriptor);
+    addConstant(0, "true", 1, booleanTypeDescriptor);
 
     /* pseudo functions */
-    SymbolTableEntryPtr readFunction = newPseudoFunction(0, "read", READ);
-    push(symbolTable->stack, readFunction);
-
-    SymbolTableEntryPtr writeFunction = newPseudoFunction(0, "write", WRITE);
-    push(symbolTable->stack, writeFunction);
+    addPseudoFunction(0, "read", READ);
+    addPseudoFunction(0, "write", WRITE);
 }
 
 void addSymbolTableEntry(SymbolTableEntryPtr entry) {
@@ -270,14 +273,19 @@ ParameterDescriptorPtr newParameterDescriptor(ParameterPtr parameter, int displa
     return parameterDescriptor;
 }
 
+/*
+ * The parameters list of type ParameterPtr comes from the compiles in the inversed order of its declaration
+ */
 ParameterDescriptorsListPtr newParameterDescriptorsRec(ParameterPtr parameter, int* displacement) {
     if(parameter == NULL) {
         return NULL;
     }
 
     if(parameter->passage == VARIABLE_PARAMETER) {
+        // a parameter by reference has only it's address on the stack, therefore it occupies only one position
         *displacement -= 1;
     } else {
+        // a parameter by value has its whole value on the stack, therefore it's size is the same as it's type
         *displacement -= parameter->type->size;
     }
 
