@@ -77,8 +77,9 @@ typedef struct _ParametersList {
 } ParameterDescriptorsList, *ParameterDescriptorsListPtr;
 
 typedef struct {
-    int mepaLabel;
-    int returnLabel;
+    int headerMepaLabel;
+    int bodyMepaLabel;
+    int returnMepaLabel;
     int variablesDisplacement;
     int parametersSize;
     int returnDisplacement;

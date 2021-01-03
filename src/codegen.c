@@ -48,12 +48,12 @@ void processFunction(TreeNodePtr node) {
     SymbolTableEntryPtr entry = addFunction(getSymbolTable(), functionHeader);
 
     addCommand("L%d:   ENFN   %d         %s",
-               entry->description.functionDescriptor->mepaLabel,
+               entry->description.functionDescriptor->headerMepaLabel,
                entry->level,
                entry->identifier);
     processBlock(node->subtrees[1]);
 
-    addCommand("L%d:   NOOP             ", entry->description.functionDescriptor->returnLabel);
+    addCommand("L%d:   NOOP             ", entry->description.functionDescriptor->returnMepaLabel);
     addCommand("      RTRN   %d        end function", entry->description.functionDescriptor->parametersSize);
 
     endFunctionLevel(getSymbolTable());
@@ -186,16 +186,16 @@ void processBlock(TreeNodePtr node) {
 
     TreeNodePtr functionsNode = node->subtrees[3];
     if(functionsNode != NULL) {
-        if(getFunctionLevel() == 0) { // generate Main functions label only if necessary
-            functionDescriptor->mepaLabel = nextMEPALabel();
+        if(functionDescriptor->bodyMepaLabel <= 0) { // generate Main functions label only if necessary
+            functionDescriptor->bodyMepaLabel = nextMEPALabel();
         }
-        addCommand("      JUMP   L%d", functionDescriptor->mepaLabel);
+        addCommand("      JUMP   L%d", functionDescriptor->bodyMepaLabel);
     }
     processFunctions(functionsNode);
 
 
     if(functionsNode != NULL) {
-        addCommand("L%d:   NOOP             body", functionDescriptor->mepaLabel);
+        addCommand("L%d:   NOOP             body", functionDescriptor->bodyMepaLabel);
     }
     processBody(node->subtrees[4]);
 
@@ -635,7 +635,7 @@ TypeDescriptorPtr processRegularFunctionCall(TreeNodePtr node, SymbolTableEntryP
     }
 
     processArgumentsList(node->subtrees[1], functionDescriptor->parameters);
-    addCommand("      CFUN   L%d,%d", functionDescriptor->mepaLabel, getFunctionLevel());
+    addCommand("      CFUN   L%d,%d", functionDescriptor->headerMepaLabel, getFunctionLevel());
 
     return functionDescriptor->returnType;
 }
@@ -803,7 +803,7 @@ void processDeclaredFunctionAsArgument(ParameterDescriptorPtr expectedParameter,
     }
 
     addCommand("      LGAD   L%d,%d",
-               valueEntry->description.functionDescriptor->mepaLabel,
+               valueEntry->description.functionDescriptor->headerMepaLabel,
                valueEntry->level - 1);
 }
 
@@ -903,7 +903,7 @@ void processReturn(TreeNodePtr node) {
     if(expressionNode != NULL && functionDescriptor->returnType != NULL) {
         processReturnWithValue(expressionNode, functionDescriptor);
     } else if (expressionNode == NULL && functionDescriptor->returnType == NULL) {
-        addCommand("      JUMP   L%d", functionDescriptor->returnLabel);
+        addCommand("      JUMP   L%d", functionDescriptor->returnMepaLabel);
     } else if(functionDescriptor->returnType == NULL) {
         SemanticError("Can't return value for void function");
     } else if(expressionNode == NULL) {
@@ -926,7 +926,7 @@ void processReturnWithValue(TreeNodePtr expressionNode, FunctionDescriptorPtr fu
     } else {
         addCommand("      STMV   %d,%d", getFunctionLevel(), functionDescriptor->returnDisplacement);
     }
-    addCommand("      JUMP   L%d", functionDescriptor->returnLabel);
+    addCommand("      JUMP   L%d", functionDescriptor->returnMepaLabel);
 }
 
 void processConditional(TreeNodePtr node) {

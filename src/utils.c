@@ -196,8 +196,9 @@ void addMainFunction(SymbolTablePtr symbolTable) {
     FunctionDescriptorPtr functionDescriptor = malloc(sizeof(FunctionDescriptor));
 
     functionDescriptor->variablesDisplacement = 0;
-    functionDescriptor->mepaLabel = 1; // main can't be invoked
-    functionDescriptor->returnLabel = -1;
+    functionDescriptor->headerMepaLabel = -1; // main can't be invoked
+    functionDescriptor->returnMepaLabel = -1;
+    functionDescriptor->bodyMepaLabel = -1;
     functionDescriptor->parametersSize = 0;
     functionDescriptor->parameters = NULL; // main has no parameters
     functionDescriptor->returnDisplacement = -1; // main has no return
@@ -236,8 +237,9 @@ SymbolTableEntryPtr addFunction(SymbolTablePtr symbolTable, FunctionHeaderPtr fu
 
     FunctionDescriptorPtr functionDescriptor = malloc(sizeof(FunctionDescriptor));
 
-    functionDescriptor->mepaLabel = nextMEPALabel();
-    functionDescriptor->returnLabel = nextMEPALabel();
+    functionDescriptor->headerMepaLabel = nextMEPALabel();
+    functionDescriptor->returnMepaLabel = nextMEPALabel();
+    functionDescriptor->bodyMepaLabel = -1;
     functionDescriptor->variablesDisplacement = 0;
     functionDescriptor->parametersSize = totalParametersSize(functionHeader->parameters);
     functionDescriptor->returnType = functionHeader->returnType;
