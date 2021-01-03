@@ -4,9 +4,9 @@
 #include <stdlib.h>
 #include "datastructures.h"
 
-/****
+/***********************************************************************************************************************
  * Symbol Table definitions
- ****/
+ **********************************************************************************************************************/
 
 typedef enum {
     VALUE_PARAMETER,
@@ -124,9 +124,9 @@ typedef struct {
     TypeDescriptorPtr booleanTypeDescriptor;
 } SymbolTable, *SymbolTablePtr;
 
-/****
- * Other definitions
- ****/
+/***********************************************************************************************************************
+ * Auxiliary structures
+ **********************************************************************************************************************/
 
 struct _FunctionHeader;
 
@@ -161,12 +161,10 @@ typedef struct {
     } content;
 } Value;
 
-/****
+/***********************************************************************************************************************
  * Symbol Table functions
- ****/
-
+ **********************************************************************************************************************/
 SymbolTablePtr getSymbolTable();
-int getFunctionLevel();
 
 SymbolTableEntryPtr findIdentifier(char* identifier);
 FunctionDescriptorPtr findCurrentFunctionDescriptor();
@@ -180,21 +178,31 @@ void addLabel(char* identifier);
 void addType(char* identifier, TypeDescriptorPtr typeDescriptor);
 void addVariable(char* identifier, TypeDescriptorPtr typeDescriptor);
 
+/***********************************************************************************************************************
+ * Level counter functions
+ **********************************************************************************************************************/
+int getFunctionLevel();
 void endFunctionLevel();
 
-bool equivalentTypes(TypeDescriptorPtr type1, TypeDescriptorPtr type2);
-bool equivalentFunctions(TypeDescriptorPtr functionType, FunctionDescriptorPtr functionDescriptor);
-
-/****
- * Other functions
- ****/
+/***********************************************************************************************************************
+ * MEPA label counter functions
+ **********************************************************************************************************************/
 int nextMEPALabel();
+
+/***********************************************************************************************************************
+ * Type Compatibility functions
+ **********************************************************************************************************************/
+bool equivalentTypes(TypeDescriptorPtr type1, TypeDescriptorPtr type2);
+
+/***********************************************************************************************************************
+ * Auxiliary structures functions
+ **********************************************************************************************************************/
 ParameterPtr concatenateParameters(ParameterPtr parameters1, ParameterPtr parameters2);
 Value valueFromEntry(SymbolTableEntryPtr entry);
 
-/****
- * Debug
- ****/
+/***********************************************************************************************************************
+ * Debug facilities
+ **********************************************************************************************************************/
 char* getSymbolTableCategoryName(SymbolTableCategory category);
 char* getTypeCategoryName(TypeCategory category);
 char* getPredefinedTypeName(PredefinedType category);
