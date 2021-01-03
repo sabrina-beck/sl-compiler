@@ -126,24 +126,25 @@ ParameterDescriptorPtr newParameterDescriptor(ParameterPtr parameter, int displa
     return parameterDescriptor;
 }
 
-ParameterDescriptorsListPtr newParameterDescriptors(ParameterPtr parameters) {
-    ParameterDescriptorsListPtr parametersList = NULL;
-
-    int displacement = FUNCTION_PARAMETERS_DISPLACEMENT;
-
-    ParameterPtr current = parameters;
-    while(current != NULL) {
-
-        ParameterDescriptorsListPtr parameterItem = malloc(sizeof(ParameterDescriptorsList));
-        parameterItem->descriptor = newParameterDescriptor(current, displacement);
-        parameterItem->next = parametersList;
-        parametersList = parameterItem;
-
-        displacement -= parameterItem->descriptor->type->size;
-        current = current->next;
+ParameterDescriptorsListPtr newParameterDescriptorsRec(ParameterPtr parameter, int* displacement) {
+    if(parameter == NULL) {
+        return NULL;
     }
 
-    return parametersList;
+    ParameterDescriptorsListPtr parameterDescriptor = malloc(sizeof(ParameterDescriptorsList));
+    parameterDescriptor->descriptor = newParameterDescriptor(parameter, *displacement);
+
+    *displacement -= parameterDescriptor->descriptor->type->size;
+
+    ParameterDescriptorsListPtr nextParameters = newParameterDescriptorsRec(parameter->next, displacement);
+    parameterDescriptor->next = nextParameters;
+
+    return parameterDescriptor;
+}
+
+ParameterDescriptorsListPtr newParameterDescriptors(ParameterPtr parameters) {
+    int displacement = FUNCTION_PARAMETERS_DISPLACEMENT;
+    return newParameterDescriptorsRec(parameters, &displacement);
 }
 
 TypeDescriptorPtr newFunctionType(FunctionHeaderPtr functionHeader) {
