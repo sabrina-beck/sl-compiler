@@ -1,4 +1,5 @@
 #include "utils.h"
+#include "slc.h"
 
 #include <stdlib.h>
 #include <stdarg.h>
@@ -76,5 +77,20 @@ void addCommand(const char* commandFormat, ...) {
     printf("\t");
     vprintf(commandFormat, args);
     printf("\n");
+    va_end(args);
+}
+
+/***********************************************************************************************************************
+ * Semantic Error Treatment
+ **********************************************************************************************************************/
+
+void throwSemanticError(const char* messageFormat, ...) {
+    va_list args;
+    va_start(args, messageFormat);
+
+    char message[500];
+    vsprintf(message, messageFormat, args);
+    SemanticError(message);
+
     va_end(args);
 }

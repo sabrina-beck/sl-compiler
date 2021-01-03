@@ -1,8 +1,8 @@
 #include "codegenp.h"
 
-/**
- * Implementations
- **/
+/***********************************************************************************************************************
+ * Code gen functions Implementation
+ **********************************************************************************************************************/
 void processProgram(void *p) {
     TreeNodePtr treeRoot = (TreeNodePtr) p;
 
@@ -17,18 +17,14 @@ void processMainFunction(TreeNodePtr node) {
     }
 
     FunctionHeaderPtr functionHeader = processFunctionHeader(node->subtrees[0]);
-    if(functionHeader->returnType != NULL) {
-        SemanticError("Main function should be void");
-    }
-    if(functionHeader->parameters != NULL) {
-        SemanticError("Main function shouldn't have any parameters");
-    }
+    mainFunctionSemanticCheck(functionHeader);
     FunctionDescriptorPtr functionDescriptor = addMainFunction();
 
     addCommand("MAIN");
 
     processBlock(node->subtrees[1]);
 
+    // Deallocates the declared variables
     if(functionDescriptor->variablesDisplacement > 0) {
         addCommand("DLOC %d", functionDescriptor->variablesDisplacement);
     }
@@ -50,13 +46,10 @@ void processFunction(TreeNodePtr node) {
                entry->level,
                entry->identifier);
 
-    if(functionDescriptor->variablesDisplacement > 0) {
-        addCommand("ALOC %d", functionDescriptor->variablesDisplacement);
-    }
-
     processBlock(node->subtrees[1]);
 
     addCommand("L%d: NOOP", functionDescriptor->returnMepaLabel);
+    // Deallocates the declared variables
     if(functionDescriptor->variablesDisplacement > 0) {
         addCommand("DLOC %d", functionDescriptor->variablesDisplacement);
     }
@@ -72,14 +65,10 @@ FunctionHeaderPtr processFunctionHeader(TreeNodePtr node) {
         UnexpectedNodeCategoryError(FUNCTION_HEADER_NODE, node->category);
     }
 
-    TypeDescriptorPtr returnType = processFunctionReturnType(node->subtrees[0]);
-    char* identifier = processIdentifier(node->subtrees[1]);
-    ParameterPtr parameters = processFormalParameter(node->subtrees[2]);
-
     FunctionHeaderPtr function = malloc(sizeof(FunctionHeader));
-    function->returnType = returnType;
-    function->name = identifier;
-    function->parameters = parameters;
+    function->returnType = processFunctionReturnType(node->subtrees[0]);
+    function->name = processIdentifier(node->subtrees[1]);
+    function->parameters = processFormalParameter(node->subtrees[2]);
 
     return function;
 }
@@ -112,6 +101,7 @@ ParameterPtr processFormalParameter(TreeNodePtr node) {
             UnexpectedChildNodeCategoryError(FUNCTION_HEADER_NODE, node->category);
     }
 
+    // process the formal parameters in their declaration order
     ParameterPtr nextParameters = processFormalParameter(node->next);
 
     return concatenateParameters(parameters, nextParameters);
@@ -197,13 +187,16 @@ void processBlock(TreeNodePtr node) {
     processVariables(node->subtrees[2]);
 
     FunctionDescriptorPtr functionDescriptor = findCurrentFunctionDescriptor();
+    // Allocates the declared variables space on stack
     if(functionDescriptor->variablesDisplacement > 0) {
         addCommand("ALOC %d", functionDescriptor->variablesDisplacement);
     }
 
     TreeNodePtr functionsNode = node->subtrees[3];
+    // Jumps the nested declared functions instructions and goes directly to the current functions body
     if(functionsNode != NULL) {
-        if(functionDescriptor->bodyMepaLabel <= 0) { // generate Main functions label only if necessary
+        // generate functions body label only if necessary
+        if(functionDescriptor->bodyMepaLabel <= 0) {
             functionDescriptor->bodyMepaLabel = nextMEPALabel();
         }
         addCommand("JUMP L%d", functionDescriptor->bodyMepaLabel);
@@ -322,7 +315,7 @@ TypeDescriptorPtr processIdentifierAsType(TreeNodePtr node) {
     SymbolTableEntryPtr entry = findIdentifier(identifier);
 
     if(entry->category != TYPE_SYMBOL) {
-        UnexpectedSymbolEntryCategoryError(TYPE_SYMBOL, entry->category);
+        UnexpectedSymbolEntryCategoryError01(TYPE_SYMBOL, entry->category);
     }
     return entry->description.typeDescriptor;
 }
@@ -343,7 +336,7 @@ TypeDescriptorPtr processType(TreeNodePtr node) {
     SymbolTableEntryPtr entry = findIdentifier(identifier);
 
     if(entry->category != TYPE_SYMBOL) {
-        UnexpectedSymbolEntryCategoryError(TYPE_SYMBOL, entry->category);
+        UnexpectedSymbolEntryCategoryError01(TYPE_SYMBOL, entry->category);
     }
 
     TypeDescriptorPtr elementType = entry->description.typeDescriptor;
@@ -421,7 +414,7 @@ void processLabel(TreeNodePtr node) {
     }
 
     if(symbolTableEntry->category != LABEL_SYMBOL) {
-        UnexpectedSymbolEntryCategoryError(LABEL_SYMBOL, symbolTableEntry->category);
+        UnexpectedSymbolEntryCategoryError01(LABEL_SYMBOL, symbolTableEntry->category);
     }
 
     if(symbolTableEntry->description.labelDescriptor->defined) {
@@ -432,7 +425,7 @@ void processLabel(TreeNodePtr node) {
     labelDescriptor->defined = true;
 
     // since there are only statements at this level, the current activation record displacement on the stack
-    // will always be equal to the size of its alocated variables
+    // will always be equal to the size of its allocated variables
     FunctionDescriptorPtr functionDescriptor = findCurrentFunctionDescriptor();
     addCommand("L%d: ENLB %d,%d  \t%s:",
                labelDescriptor->mepaLabel,
@@ -482,7 +475,7 @@ void processAssignment(TreeNodePtr node) {
     TypeDescriptorPtr exprType = processExpression(node->subtrees[1]);
 
     if(!equivalentTypes(exprType, value.type)) {
-        SemanticError("Trying to assign value to variable of incompatible type");
+        throwSemanticError("Trying to assign value to variable of incompatible type");
     }
 
     switch (value.category) {
@@ -497,12 +490,14 @@ void processAssignment(TreeNodePtr node) {
             addCommand("STVL %d,%d", value.level, value.content.displacement);
             break;
         case CONSTANT:
-            SemanticError("Constants can't be assigned");
+            throwSemanticError("Constants can't be assigned");
             break;
     }
 }
 
-// if it is an indexed array, the position address will be on top of the stack (exec time)
+/*
+ * If it an array, code to leave the address of it's indexed position on top of the stack will be generated
+ */
 Value processValue(TreeNodePtr node) {
     if(node->category != VALUE_NODE) {
         UnexpectedNodeCategoryError(VALUE_NODE, node->category);
@@ -511,7 +506,7 @@ Value processValue(TreeNodePtr node) {
     char* identifier = processIdentifier(node->subtrees[0]);
     SymbolTableEntryPtr entry = findIdentifier(identifier);
     if(entry == NULL) {
-        SemanticError("Unknown identifier");
+        throwSemanticError("Unknown identifier");
     }
 
     Value value = valueFromEntry(entry);
@@ -546,7 +541,6 @@ void loadArrayBaseAddress(Value value) {
     }
 }
 
-// it modifies value.type
 void processArrayIndexList(TreeNodePtr node, Value* value) {
     if(node == NULL) {
         return;
@@ -565,13 +559,13 @@ void processArrayIndex(TreeNodePtr node, Value* value) {
     }
 
     if(value->type->category != ARRAY_TYPE) {
-        SemanticError("Expected array type to process array index");
+        throwSemanticError("Expected array type to process array index");
     }
 
     TypeDescriptorPtr exprType = processExpression(node->subtrees[0]);
 
     if(!equivalentTypes(exprType, getSymbolTable()->integerTypeDescriptor)) {
-        SemanticError("Index should be an integer");
+        throwSemanticError("Index should be an integer");
     }
 
     TypeDescriptorPtr arrayElementType = value->type->description.arrayDescriptor->elementType;
@@ -599,7 +593,7 @@ TypeDescriptorPtr processFunctionCall(TreeNodePtr node) {
             return processPseudoFunctionCall(node, functionEntry);
         }
         default:
-            SymbolEntryCategoryError("function call", functionEntry->category);
+            UnexpectedSymbolEntryCategoryError02("function call", functionEntry->category);
     }
 }
 
@@ -609,9 +603,10 @@ TypeDescriptorPtr processFunctionParameterCall(TreeNodePtr node, SymbolTableEntr
     TypeDescriptorPtr parameterType = parameterDescriptor->type;
 
     if (parameterType->category != FUNCTION_TYPE) {
-        SemanticError("Expected function as parameter");
+        throwSemanticError("Expected function as parameter");
     }
 
+    // Allocates space on stack for the return value, if it exists
     TypeDescriptorPtr returnType = parameterType->description.functionTypeDescriptor->returnType;
     if(returnType!= NULL && returnType->size > 0) {
         addCommand("ALOC %d  \tresult", returnType->size);
@@ -632,6 +627,7 @@ TypeDescriptorPtr processFunctionParameterCall(TreeNodePtr node, SymbolTableEntr
 TypeDescriptorPtr processRegularFunctionCall(TreeNodePtr node, SymbolTableEntryPtr functionEntry) {
     FunctionDescriptorPtr functionDescriptor = functionEntry->description.functionDescriptor;
 
+    // Allocates space on stack for the return value, if it exists
     TypeDescriptorPtr returnType = functionDescriptor->returnType;
     if(returnType!= NULL && returnType->size > 0) {
         addCommand("ALOC %d  \tresult", returnType->size);
@@ -667,11 +663,11 @@ void processReadFunctionCall(TreeNodePtr argumentNode) {
 
     addCommand("READ");
 
-    TreeNodePtr valueNode = getVariableExpression(argumentNode);
+    TreeNodePtr valueNode = getValueExpression(argumentNode);
     Value value = processValue(valueNode);
 
     if(value.type->size > 1) {
-        SemanticError("Can't read multiple values at a time");
+        throwSemanticError("Can't read multiple values at a time");
     }
 
     switch (value.category) {
@@ -686,7 +682,7 @@ void processReadFunctionCall(TreeNodePtr argumentNode) {
             addCommand("STVL %d,%d", value.level, value.content.displacement);
             break;
         case CONSTANT:
-            SemanticError("Can't read boolean value");
+            throwSemanticError("Can't read boolean value");
             break;
     }
 
@@ -730,11 +726,11 @@ void processArgumentsList(TreeNodePtr node, ParameterDescriptorsListPtr paramete
     }
 
     if(currentParameter != NULL) {
-        SemanticError("Missing parameters for function call");
+        throwSemanticError("Missing parameters for function call");
     }
 
     if(currentNode != NULL) {
-        SemanticError("Too many parameters for function call");
+        throwSemanticError("Too many parameters for function call");
     }
 }
 
@@ -742,17 +738,17 @@ void processArgumentByValue(ParameterDescriptorPtr expectedParameter, TreeNodePt
     TypeDescriptorPtr expressionType = processExpression(node);
 
     if(!equivalentTypes(expectedParameter->type, expressionType)) {
-        SemanticError("Wrong parameter type on function");
+        throwSemanticError("Wrong parameter type on function");
     }
 }
 
-// Arguments by reference can only be a variable or array position
 void processArgumentByReference(ParameterDescriptorPtr expectedParameter, TreeNodePtr node) {
-    TreeNodePtr valueNode = getVariableExpression(node);
+    // Arguments by reference can only be a value, it cannot be any expression
+    TreeNodePtr valueNode = getValueExpression(node);
     Value value = processValue(valueNode);
 
     if(!equivalentTypes(expectedParameter->type, value.type)) {
-        SemanticError("Wrong parameter type on function");
+        throwSemanticError("Wrong parameter type on function");
     }
 
     switch (value.category) {
@@ -767,14 +763,14 @@ void processArgumentByReference(ParameterDescriptorPtr expectedParameter, TreeNo
             addCommand("LADR %d,%d", value.level, value.content.displacement);
             break;
         case CONSTANT:
-            SemanticError("Can't pass constant by reference");
+            throwSemanticError("Can't pass constant by reference");
             break;
     }
 }
 
 void processArgumentByFunctionAsParameter(ParameterDescriptorPtr expectedParameter, TreeNodePtr node) {
-
-    TreeNodePtr valueNode = getVariableExpression(node);
+    // Arguments by function as parameters must be a value, but more specifically, it must by a function identifier
+    TreeNodePtr valueNode = getValueExpression(node);
 
     TreeNodePtr identifierNode = valueNode->subtrees[0];
     char* identifier = processIdentifier(identifierNode);
@@ -790,19 +786,19 @@ void processArgumentByFunctionAsParameter(ParameterDescriptorPtr expectedParamet
             break;
         }
         default:
-            SemanticError("Expected function as parameter");
+            throwSemanticError("Expected function as parameter");
     }
 
     TreeNodePtr arrayIndexNode = valueNode->subtrees[1];
     if(arrayIndexNode != NULL) {
-        SemanticError("Trying to index function identifier");
+        throwSemanticError("Trying to index function identifier");
     }
 }
 
 void processDeclaredFunctionAsArgument(ParameterDescriptorPtr expectedParameter, SymbolTableEntryPtr valueEntry) {
 
     if(!equivalentTypes(expectedParameter->type, valueEntry->description.functionDescriptor->functionType)) {
-        SemanticError("Wrong parameter type on function");
+        throwSemanticError("Wrong parameter type on function");
     }
 
     addCommand("LGAD L%d,%d",
@@ -815,11 +811,11 @@ void processFunctionParameterAsArgument(ParameterDescriptorPtr expectedParameter
     ParameterDescriptorPtr argumentDescriptor = valueEntry->description.parameterDescriptor;
 
     if (argumentDescriptor->type->category != FUNCTION_TYPE) {
-        SemanticError("Expected function as parameter");
+        throwSemanticError("Expected function as parameter");
     }
 
     if(!equivalentTypes(expectedParameter->type, argumentDescriptor->type)) {
-        SemanticError("Wrong parameter type on function");
+        throwSemanticError("Wrong parameter type on function");
     }
 
     // generalized address is already on the stack as the current function parameter
@@ -832,7 +828,7 @@ void processFunctionParameterAsArgument(ParameterDescriptorPtr expectedParameter
 }
 
 /* If the expression is not a single factor, then it is a semantic error */
-TreeNodePtr getVariableExpression(TreeNodePtr node) {
+TreeNodePtr getValueExpression(TreeNodePtr node) {
     TreeNodePtr binaryOpExpressionNode = node->subtrees[0];
     if(binaryOpExpressionNode->category != BINARY_OPERATOR_EXPRESSION_NODE) {
         UnexpectedNodeCategoryError(BINARY_OPERATOR_EXPRESSION_NODE, binaryOpExpressionNode->category);
@@ -841,7 +837,7 @@ TreeNodePtr getVariableExpression(TreeNodePtr node) {
     TreeNodePtr relationalOperatorNode = node->subtrees[1];
     TreeNodePtr anotherBinaryIoExpression = node->subtrees[2];
     if(relationalOperatorNode != NULL || anotherBinaryIoExpression != NULL) {
-        SemanticError("Expected expression to be single factor, but it is relational expression");
+        throwSemanticError("Expected expression to be single factor, but it is relational expression");
     }
 
     TreeNodePtr termNode = binaryOpExpressionNode->subtrees[0];
@@ -850,7 +846,7 @@ TreeNodePtr getVariableExpression(TreeNodePtr node) {
     }
     TreeNodePtr additiveOperationNode = binaryOpExpressionNode->subtrees[1];
     if(additiveOperationNode != NULL) {
-        SemanticError("Expected expression to be single factor, but it is an additive operation");
+        throwSemanticError("Expected expression to be single factor, but it is an additive operation");
     }
 
     TreeNodePtr factorNode = termNode->subtrees[0];
@@ -859,13 +855,13 @@ TreeNodePtr getVariableExpression(TreeNodePtr node) {
     }
     TreeNodePtr multiplicativeOperationNode = termNode->subtrees[1];
     if(multiplicativeOperationNode != NULL) {
-        SemanticError("Expected expression to be single factor, but it is an multiplicative operation");
+        throwSemanticError("Expected expression to be single factor, but it is an multiplicative operation");
     }
 
     TreeNodePtr valueNode = factorNode->subtrees[0];
 
     if(valueNode->category == EXPRESSION_NODE) {
-        valueNode = getVariableExpression(valueNode);
+        valueNode = getValueExpression(valueNode);
     }
 
     if(valueNode->category != VALUE_NODE) {
@@ -884,7 +880,7 @@ void processGoto(TreeNodePtr node) {
 
     SymbolTableEntryPtr labelEntry = findIdentifier(identifier);
     if(labelEntry->category != LABEL_SYMBOL) {
-        UnexpectedSymbolEntryCategoryError(LABEL_SYMBOL, labelEntry->category);
+        UnexpectedSymbolEntryCategoryError01(LABEL_SYMBOL, labelEntry->category);
     }
 
     addCommand("JUMP L%d  \tgoto %s",
@@ -899,7 +895,7 @@ void processReturn(TreeNodePtr node) {
 
     FunctionDescriptorPtr functionDescriptor = findCurrentFunctionDescriptor();
     if(functionDescriptor == NULL) {
-        SemanticError("Unexpected error, can't find current function descriptor");
+        throwSemanticError("Unexpected error, can't find current function descriptor");
     }
 
     TreeNodePtr expressionNode = node->subtrees[0];
@@ -908,9 +904,9 @@ void processReturn(TreeNodePtr node) {
     } else if (expressionNode == NULL && functionDescriptor->returnType == NULL) {
         addCommand("JUMP L%d", functionDescriptor->returnMepaLabel);
     } else if(functionDescriptor->returnType == NULL) {
-        SemanticError("Can't return value for void function");
+        throwSemanticError("Can't return value for void function");
     } else if(expressionNode == NULL) {
-        SemanticError("Missing return value for function");
+        throwSemanticError("Missing return value for function");
     }
 }
 
@@ -921,7 +917,7 @@ void processReturnWithValue(TreeNodePtr expressionNode, FunctionDescriptorPtr fu
 
     TypeDescriptorPtr expressionType = processExpression(expressionNode);
     if (!equivalentTypes(expressionType, functionDescriptor->returnType)) {
-        SemanticError("Expression with type different than function return type");
+        throwSemanticError("Expression with type different than function return type");
     }
 
     if(expressionType->size == 1) {
@@ -946,7 +942,7 @@ void processConditional(TreeNodePtr node) {
 
     TypeDescriptorPtr expressionType = processExpression(conditionNode);
     if(!equivalentTypes(expressionType, getSymbolTable()->booleanTypeDescriptor)) {
-        SemanticError("Expected boolean expression");
+        throwSemanticError("Expected boolean expression");
     }
     addCommand("JMPF L%d  \tif", elseLabel);
 
@@ -978,7 +974,7 @@ void processRepetitive(TreeNodePtr node) {
     addCommand("L%d: NOOP  \twhile", conditionLabel);
     TypeDescriptorPtr expressionType = processExpression(conditionNode);
     if(!equivalentTypes(expressionType, getSymbolTable()->booleanTypeDescriptor)) {
-        SemanticError("Expected boolean expression");
+        throwSemanticError("Expected boolean expression");
     }
     addCommand("JMPF L%d", exitLabel);
 
@@ -1025,7 +1021,7 @@ TypeDescriptorPtr processExpression(TreeNodePtr node) {
     TypeDescriptorPtr operatorType = processRelationalOperator(relationalOperatorNode);
 
     if(!equivalentTypes(firstExprType, secondExprType)) {
-        SemanticError("Expressions of incompatible type");
+        throwSemanticError("Expressions of incompatible type");
     }
 
     return operatorType;
@@ -1061,7 +1057,7 @@ TypeDescriptorPtr processBinaryOpExpression(TreeNodePtr node) {
 
     if(!equivalentTypes(termType, operatorType) ||
        !equivalentTypes(binaryOpExpressionType, operatorType)) {
-        SemanticError("Expression's terms have incompatible types");
+        throwSemanticError("Expression's terms have incompatible types");
     }
 
     return operatorType;
@@ -1083,7 +1079,7 @@ TypeDescriptorPtr processUnopExpression(TreeNodePtr node) {
         TypeDescriptorPtr operatorType = processUnaryOperator(unaryOperatorNode);
 
         if(!equivalentTypes(termType, operatorType)) {
-            SemanticError("Expression's term type incompatible with unary operator");
+            throwSemanticError("Expression's term type incompatible with unary operator");
         }
 
         return operatorType;
@@ -1099,7 +1095,7 @@ TypeDescriptorPtr processUnopExpression(TreeNodePtr node) {
     if(!equivalentTypes(termType, operatorType) ||
        !equivalentTypes(termType, additiveOperatorType) ||
        !equivalentTypes(binaryOpExpressionType, additiveOperatorType)) {
-        SemanticError("Expression's term type incompatible with unary operator");
+        throwSemanticError("Expression's term type incompatible with unary operator");
     }
 
     return additiveOperatorType;
@@ -1124,7 +1120,7 @@ TypeDescriptorPtr processTerm(TreeNodePtr node) {
 
     if(!equivalentTypes(factorType, multiplicativeOpType) ||
        !equivalentTypes(termType, multiplicativeOpType)) {
-        SemanticError("Term's factors of incompatible types");
+        throwSemanticError("Term's factors of incompatible types");
     }
 
     return factorType;
@@ -1187,7 +1183,7 @@ TypeDescriptorPtr processIntegerFactor(TreeNodePtr node) {
 TypeDescriptorPtr processFunctionCallFactor(TreeNodePtr node) {
     TypeDescriptorPtr functionReturnType = processFunctionCall(node);
     if (functionReturnType == NULL) {
-        SemanticError("Void function used in expression");
+        throwSemanticError("Void function used in expression");
     }
     return functionReturnType;
 }
@@ -1202,7 +1198,7 @@ int processInteger(TreeNodePtr node) {
     char* end;
     int integer = strtol(integerStr, &end, 10);
     if(end != NULL && *end != '\0') {
-        SemanticError("Integer that it isn't an integer");
+        throwSemanticError("Integer that it isn't an integer");
     }
 
     return integer;
@@ -1305,39 +1301,39 @@ TypeDescriptorPtr processMultiplicativeOperator(TreeNodePtr node) {
 }
 
 /** Semantic Errors handling functions **/
+void mainFunctionSemanticCheck(FunctionHeaderPtr functionHeader) {
+    if(functionHeader->returnType != NULL) {
+        throwSemanticError("Main function should be void");
+    }
+    if(functionHeader->parameters != NULL) {
+        throwSemanticError("Main function shouldn't have any parameters");
+    }
+}
+
 void LabelAlreadyDefinedError(char* identifier) {
-    char message[255];
-    sprintf(message, "Can't define label %s again", identifier);
-    SemanticError(message);
+    throwSemanticError("Can't define label %s again", identifier);
 }
 
 void UndeclaredLabelError(char* identifier) {
-    char message[255];
-    sprintf(message, "Undeclared label %s", identifier);
-    SemanticError(message);
+    throwSemanticError("Undeclared label %s", identifier);
 }
 
-void UnexpectedSymbolEntryCategoryError(SymbolTableCategory expected, SymbolTableCategory gotten) {
-    char message[100];
-    sprintf(message, "Expected %s, but got %s", getSymbolTableCategoryName(expected), getSymbolTableCategoryName(gotten));
-    SemanticError(message);
+void UnexpectedSymbolEntryCategoryError01(SymbolTableCategory expected, SymbolTableCategory gotten) {
+    throwSemanticError("Expected %s, but got %s",
+                       getSymbolTableCategoryName(expected),
+                       getSymbolTableCategoryName(gotten));
 }
 
-void SymbolEntryCategoryError(char* expected, SymbolTableCategory gotten) {
-    char message[100];
-    sprintf(message, "Expected %s, but got %s", expected, getSymbolTableCategoryName(gotten));
-    SemanticError(message);
+void UnexpectedSymbolEntryCategoryError02(char* expected, SymbolTableCategory gotten) {
+    throwSemanticError("Expected %s, but got %s", expected, getSymbolTableCategoryName(gotten));
 }
 
 void UnexpectedNodeCategoryError(NodeCategory expected, NodeCategory gotten) {
-    char message[50];
-    sprintf(message, "Expected %s, but got %s", getCategoryName(expected), getCategoryName(gotten));
-    SemanticError(message);
+    throwSemanticError("Expected %s, but got %s", getCategoryName(expected), getCategoryName(gotten));
 }
 
 void UnexpectedChildNodeCategoryError(NodeCategory fatherNodeCategory, NodeCategory childNodeCategory) {
-    char message[100];
-    sprintf(message, "For node category %s, got unexpected child node category %s",
-            getCategoryName(fatherNodeCategory), getCategoryName(childNodeCategory));
-    SemanticError(message);
+    throwSemanticError("For node category %s, got unexpected child node category %s",
+                       getCategoryName(fatherNodeCategory),
+                       getCategoryName(childNodeCategory));
 }

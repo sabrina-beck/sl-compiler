@@ -1,12 +1,14 @@
 #include "codegen.h"
 #include "tree.h"
-#include "slc.h"
 #include "symboltable.h"
 #include "utils.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 
+/***********************************************************************************************************************
+ * Code gen functions Declaration
+ **********************************************************************************************************************/
 
 void processMainFunction(TreeNodePtr node);
 void processFunction(TreeNodePtr node);
@@ -52,6 +54,10 @@ void processLabel(TreeNodePtr node);
 void processUnlabeledStatement(TreeNodePtr node);
 
 void processAssignment(TreeNodePtr node);
+
+/*
+ * If it an array, code to leave the address of it's indexed position on top of the stack will be generated
+ */
 Value processValue(TreeNodePtr node);
 void loadArrayBaseAddress(Value value);
 void processArrayIndexList(TreeNodePtr node, Value* variable);
@@ -72,7 +78,7 @@ void processArgumentByFunctionAsParameter(ParameterDescriptorPtr expectedParamet
 void processDeclaredFunctionAsArgument(ParameterDescriptorPtr expectedParameter, SymbolTableEntryPtr valueEntry);
 void processFunctionParameterAsArgument(ParameterDescriptorPtr expectedParameter, SymbolTableEntryPtr valueEntry);
 
-TreeNodePtr getVariableExpression(TreeNodePtr node);
+TreeNodePtr getValueExpression(TreeNodePtr node);
 
 void processGoto(TreeNodePtr node);
 
@@ -100,10 +106,15 @@ TypeDescriptorPtr processAdditiveOperator(TreeNodePtr node);
 TypeDescriptorPtr processUnaryOperator(TreeNodePtr node);
 TypeDescriptorPtr processMultiplicativeOperator(TreeNodePtr node);
 
-/** Error Handling **/
+
+/***********************************************************************************************************************
+ * Semantic error treatment
+ **********************************************************************************************************************/
+ 
+void mainFunctionSemanticCheck(FunctionHeaderPtr functionHeader);
 void LabelAlreadyDefinedError(char* identifier);
 void UndeclaredLabelError(char* identifier);
-void UnexpectedSymbolEntryCategoryError(SymbolTableCategory expected, SymbolTableCategory gotten);
-void SymbolEntryCategoryError(char* expected, SymbolTableCategory gotten);
+void UnexpectedSymbolEntryCategoryError01(SymbolTableCategory expected, SymbolTableCategory gotten);
+void UnexpectedSymbolEntryCategoryError02(char* expected, SymbolTableCategory gotten);
 void UnexpectedNodeCategoryError(NodeCategory expected, NodeCategory gotten);
 void UnexpectedChildNodeCategoryError(NodeCategory fatherNodeCategory, NodeCategory childNodeCategory);

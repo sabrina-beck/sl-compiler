@@ -54,4 +54,13 @@ void* find(Stack* stack, void* secondParam, bool (*predicate)(void*, void*));
  */
 void addCommand(const char* commandFormat, ...);
 
+
+/***********************************************************************************************************************
+ * Semantic Error Treatment
+ **********************************************************************************************************************/
+/*
+ * Throws a semantic error
+ */
+void throwSemanticError(const char* messageFormat, ...);
+
 #endif
