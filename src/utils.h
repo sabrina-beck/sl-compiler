@@ -2,7 +2,6 @@
 #define UTILS_HEADER
 
 #include <stdlib.h>
-
 #include "datastructures.h"
 
 /****
@@ -14,10 +13,6 @@ typedef enum {
     VARIABLE_PARAMETER,
     FUNCTION_PARAMETER
 } ParameterPassage;
-
-struct _TypeDescriptor;
-struct _ParameterDescriptor;
-struct _ParametersList;
 
 typedef enum {
     PREDEFINED_TYPE,
@@ -34,6 +29,20 @@ typedef enum {
     READ,
     WRITE
 } PseudoFunction;
+
+typedef enum {
+    TYPE_SYMBOL, // boolean and integer
+    CONSTANT_SYMBOL, // true and false
+    VARIABLE_SYMBOL,
+    PARAMETER_SYMBOL,
+    PSEUDO_FUNCTION_SYMBOL, // deal with read and write psudo functions
+    FUNCTION_SYMBOL,
+    LABEL_SYMBOL,
+} SymbolTableCategory;
+
+struct _TypeDescriptor;
+struct _ParameterDescriptor;
+struct _ParametersList;
 
 typedef struct {
     int dimension; // number of elements
@@ -92,16 +101,6 @@ typedef struct {
     int mepaLabel;
     bool defined;
 } LabelDescriptor, *LabelDescriptorPtr;
-
-typedef enum {
-    TYPE_SYMBOL, // boolean and integer
-    CONSTANT_SYMBOL, // true and false
-    VARIABLE_SYMBOL,
-    PARAMETER_SYMBOL,
-    PSEUDO_FUNCTION_SYMBOL, // deal with read and write psudo functions
-    FUNCTION_SYMBOL,
-    LABEL_SYMBOL,
-} SymbolTableCategory;
 
 typedef struct {
     SymbolTableCategory category;
