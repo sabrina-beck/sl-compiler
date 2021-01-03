@@ -226,11 +226,13 @@ SymbolTableEntryPtr addFunction(SymbolTablePtr symbolTable, FunctionHeaderPtr fu
     functionDescriptor->parameters = addParameterEntries(symbolTable, functionHeader->parameters);
     functionDescriptor->functionType = newFunctionType(functionHeader);
 
-    if(functionHeader->parameters == NULL) {
-        functionDescriptor->returnDisplacement = FUNCTION_PARAMETERS_DISPLACEMENT - functionHeader->returnType->size;
-    } else {
-        functionDescriptor->returnDisplacement =
-                FUNCTION_PARAMETERS_DISPLACEMENT - functionHeader->returnType->size - functionDescriptor->parametersSize;
+    if(functionHeader->returnType != NULL) {
+        if(functionHeader->parameters == NULL) {
+            functionDescriptor->returnDisplacement =  - functionHeader->returnType->size + 1 + FUNCTION_PARAMETERS_DISPLACEMENT;
+        } else {
+            functionDescriptor->returnDisplacement =
+                    - functionHeader->returnType->size - functionDescriptor->parametersSize + 1 + FUNCTION_PARAMETERS_DISPLACEMENT;
+        }
     }
 
     SymbolTableEntryPtr symbol = malloc(sizeof(SymbolTableEntry));
