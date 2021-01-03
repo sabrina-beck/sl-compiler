@@ -41,7 +41,11 @@ int totalParametersSize(ParameterPtr parameter) {
     int size = 0;
     ParameterPtr current = parameter;
     while (current != NULL) {
-        size += current->type->size;
+        if(current->passage == VARIABLE_PARAMETER) {
+            size += 1;
+        } else {
+            size += current->type->size;
+        }
         current = current->next;
     }
     return size;
@@ -127,14 +131,14 @@ ParameterDescriptorsListPtr newParameterDescriptorsRec(ParameterPtr parameter, i
         return NULL;
     }
 
-    ParameterDescriptorsListPtr parameterDescriptor = malloc(sizeof(ParameterDescriptorsList));
-    parameterDescriptor->descriptor = newParameterDescriptor(parameter, *displacement);
-
     if(parameter->passage == VARIABLE_PARAMETER) {
         *displacement -= 1;
     } else {
-        *displacement -= parameterDescriptor->descriptor->type->size;
+        *displacement -= parameter->type->size;
     }
+
+    ParameterDescriptorsListPtr parameterDescriptor = malloc(sizeof(ParameterDescriptorsList));
+    parameterDescriptor->descriptor = newParameterDescriptor(parameter, *displacement);
 
     ParameterDescriptorsListPtr nextParameters = newParameterDescriptorsRec(parameter->next, displacement);
     parameterDescriptor->next = nextParameters;
@@ -164,7 +168,7 @@ ParameterDescriptorsListPtr inverseParametersDescriptors(ParameterDescriptorsLis
 }
 
 ParameterDescriptorsListPtr newParameterDescriptors(ParameterPtr parameters) {
-    int displacement = FUNCTION_PARAMETERS_DISPLACEMENT;
+    int displacement = 1 + FUNCTION_PARAMETERS_DISPLACEMENT;
 
     return newParameterDescriptorsRec(parameters, &displacement);
 }
