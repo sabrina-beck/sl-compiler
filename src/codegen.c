@@ -47,13 +47,13 @@ void processFunction(TreeNodePtr node) {
     FunctionHeaderPtr functionHeader = processFunctionHeader(node->subtrees[0]);
     SymbolTableEntryPtr entry = addFunction(getSymbolTable(), functionHeader);
 
-    addCommand("%s:   ENFN   %d         %s",
+    addCommand("L%d:   ENFN   %d         %s",
                entry->description.functionDescriptor->mepaLabel,
                entry->level,
                entry->identifier);
     processBlock(node->subtrees[1]);
 
-    addCommand("%s:   NOOP             ", entry->description.functionDescriptor->returnLabel);
+    addCommand("L%d:   NOOP             ", entry->description.functionDescriptor->returnLabel);
     addCommand("      RTRN   %d        end function", entry->description.functionDescriptor->parametersSize);
 
     endFunctionLevel(getSymbolTable());
@@ -186,16 +186,16 @@ void processBlock(TreeNodePtr node) {
 
     TreeNodePtr functionsNode = node->subtrees[3];
     if(functionsNode != NULL) {
-        if(functionDescriptor->mepaLabel == NULL) { // generate Main functions label only if necessary
+        if(getFunctionLevel() == 0) { // generate Main functions label only if necessary
             functionDescriptor->mepaLabel = nextMEPALabel();
         }
-        addCommand("      JUMP   %s", functionDescriptor->mepaLabel);
+        addCommand("      JUMP   L%d", functionDescriptor->mepaLabel);
     }
     processFunctions(functionsNode);
 
 
     if(functionsNode != NULL) {
-        addCommand("%s:   NOOP             body", functionDescriptor->mepaLabel);
+        addCommand("L%d:   NOOP             body", functionDescriptor->mepaLabel);
     }
     processBody(node->subtrees[4]);
 
@@ -446,7 +446,7 @@ void processLabel(TreeNodePtr node) {
     // since there are only statements at this level, the current activation record displacement on the stack
     // will always be equal to the size of its alocated variables
     FunctionDescriptorPtr functionDescriptor = findCurrentFunctionDescriptor(getSymbolTable());
-    addCommand("%s:   ENLB   %d,%d        %s:",
+    addCommand("L%d:   ENLB   %d,%d        %s:",
                labelDescriptor->mepaLabel,
                symbolTableEntry->level,
                functionDescriptor->variablesDisplacement,
@@ -635,7 +635,7 @@ TypeDescriptorPtr processRegularFunctionCall(TreeNodePtr node, SymbolTableEntryP
     }
 
     processArgumentsList(node->subtrees[1], functionDescriptor->parameters);
-    addCommand("      CFUN   %s,%d", functionDescriptor->mepaLabel, getFunctionLevel());
+    addCommand("      CFUN   L%d,%d", functionDescriptor->mepaLabel, getFunctionLevel());
 
     return functionDescriptor->returnType;
 }
@@ -802,7 +802,7 @@ void processDeclaredFunctionAsArgument(ParameterDescriptorPtr expectedParameter,
         SemanticError("Wrong parameter type on function");
     }
 
-    addCommand("      LGAD   %s,%d",
+    addCommand("      LGAD   L%d,%d",
                valueEntry->description.functionDescriptor->mepaLabel,
                valueEntry->level - 1);
 }
@@ -884,7 +884,7 @@ void processGoto(TreeNodePtr node) {
         UnexpectedSymbolEntryCategoryError(LABEL_SYMBOL, labelEntry->category);
     }
 
-    addCommand("      JUMP   %s         goto %s",
+    addCommand("      JUMP   L%d         goto %s",
                labelEntry->description.labelDescriptor->mepaLabel,
                identifier);
 }
@@ -903,7 +903,7 @@ void processReturn(TreeNodePtr node) {
     if(expressionNode != NULL && functionDescriptor->returnType != NULL) {
         processReturnWithValue(expressionNode, functionDescriptor);
     } else if (expressionNode == NULL && functionDescriptor->returnType == NULL) {
-        addCommand("      JUMP   %s", functionDescriptor->returnLabel);
+        addCommand("      JUMP   L%d", functionDescriptor->returnLabel);
     } else if(functionDescriptor->returnType == NULL) {
         SemanticError("Can't return value for void function");
     } else if(expressionNode == NULL) {
@@ -926,7 +926,7 @@ void processReturnWithValue(TreeNodePtr expressionNode, FunctionDescriptorPtr fu
     } else {
         addCommand("      STMV   %d,%d", getFunctionLevel(), functionDescriptor->returnDisplacement);
     }
-    addCommand("      JUMP   %s", functionDescriptor->returnLabel);
+    addCommand("      JUMP   L%d", functionDescriptor->returnLabel);
 }
 
 void processConditional(TreeNodePtr node) {
@@ -938,26 +938,26 @@ void processConditional(TreeNodePtr node) {
     TreeNodePtr ifCompound = node->subtrees[1];
     TreeNodePtr elseCompound = node->subtrees[2];
 
-    char* elseLabel = nextMEPALabel();
-    char* elseExitLabel = nextMEPALabel();
+    int elseLabel = nextMEPALabel();
+    int elseExitLabel = nextMEPALabel();
 
     TypeDescriptorPtr expressionType = processExpression(conditionNode);
     if(!equivalentTypes(expressionType, getSymbolTable()->booleanTypeDescriptor)) {
         SemanticError("Expected boolean expression");
     }
-    addCommand("      JMPF   %s        if", elseLabel);
+    addCommand("      JMPF   L%d        if", elseLabel);
 
     processCompound(ifCompound);
 
     if(elseCompound != NULL) {
-        addCommand("      JUMP   %s", elseExitLabel);
+        addCommand("      JUMP   L%d", elseExitLabel);
 
-        addCommand("%s:   NOOP             else", elseLabel);
+        addCommand("L%d:   NOOP             else", elseLabel);
         processCompound(elseCompound);
 
-        addCommand("%s:   NOOP             end if", elseExitLabel);
+        addCommand("L%d:   NOOP             end if", elseExitLabel);
     } else {
-        addCommand("%s:   NOOP             end if", elseLabel);
+        addCommand("L%d:   NOOP             end if", elseLabel);
     }
 }
 
@@ -969,20 +969,20 @@ void processRepetitive(TreeNodePtr node) {
     TreeNodePtr conditionNode = node->subtrees[0];
     TreeNodePtr compoundNode = node->subtrees[1];
 
-    char* conditionLabel = nextMEPALabel(); // L1
-    char* exitLabel = nextMEPALabel(); // L2
+    int conditionLabel = nextMEPALabel();
+    int exitLabel = nextMEPALabel();
 
-    addCommand("%s:   NOOP             while", conditionLabel);
+    addCommand("L%d:   NOOP             while", conditionLabel);
     TypeDescriptorPtr expressionType = processExpression(conditionNode);
     if(!equivalentTypes(expressionType, getSymbolTable()->booleanTypeDescriptor)) {
         SemanticError("Expected boolean expression");
     }
-    addCommand("      JMPF   %s", exitLabel);
+    addCommand("      JMPF   L%d", exitLabel);
 
     processCompound(compoundNode);
-    addCommand("      JUMP   %s", conditionLabel);
+    addCommand("      JUMP   L%d", conditionLabel);
 
-    addCommand("%s:   NOOP             end while", exitLabel);
+    addCommand("L%d:   NOOP             end while", exitLabel);
 
 }
 

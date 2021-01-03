@@ -77,8 +77,8 @@ typedef struct _ParametersList {
 } ParameterDescriptorsList, *ParameterDescriptorsListPtr;
 
 typedef struct {
-    char* mepaLabel;
-    char* returnLabel;
+    int mepaLabel;
+    int returnLabel;
     int variablesDisplacement;
     int parametersSize;
     int returnDisplacement;
@@ -88,7 +88,7 @@ typedef struct {
 } FunctionDescriptor, *FunctionDescriptorPtr;
 
 typedef struct {
-    char* mepaLabel;
+    int mepaLabel;
     bool defined;
 } LabelDescriptor, *LabelDescriptorPtr;
 
@@ -189,7 +189,7 @@ void addSymbolTableEntry(SymbolTablePtr symbolTable, SymbolTableEntryPtr entry);
 
 int getFunctionLevel();
 
-char* nextMEPALabel();
+int nextMEPALabel();
 
 /****
  * Other functions

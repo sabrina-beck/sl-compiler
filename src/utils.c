@@ -12,10 +12,6 @@ TypeDescriptorPtr newPredefinedTypeDescriptor(int size, PredefinedType predefine
 SymbolTableEntryPtr newConstant(int level, char* identifier, int value, TypeDescriptorPtr typeDescriptor);
 SymbolTableEntryPtr newPseudoFunction(int level, char* identifier, PseudoFunction pseudoFunction);
 
-/** Mepa Label generator auxiliary structures **/
-int mepaLabelCounter = 0;
-int countDigits(int number);
-
 /** Level counter **/
 int currentFunctionLevel = 0;
 
@@ -200,8 +196,8 @@ void addMainFunction(SymbolTablePtr symbolTable) {
     FunctionDescriptorPtr functionDescriptor = malloc(sizeof(FunctionDescriptor));
 
     functionDescriptor->variablesDisplacement = 0;
-    functionDescriptor->mepaLabel = NULL; // main can't be invoked
-    functionDescriptor->returnLabel = NULL;
+    functionDescriptor->mepaLabel = 1; // main can't be invoked
+    functionDescriptor->returnLabel = -1;
     functionDescriptor->parametersSize = 0;
     functionDescriptor->parameters = NULL; // main has no parameters
     functionDescriptor->returnDisplacement = -1; // main has no return
@@ -406,14 +402,10 @@ bool equivalentParameters(ParameterDescriptorsListPtr params1, ParameterDescript
     return true;
 }
 
-char* nextMEPALabel(){
-    mepaLabelCounter++;
-
-    int digitsCount = countDigits(mepaLabelCounter);
-    char* mepaLabel = malloc(sizeof(char)*(digitsCount+1)); // TODO free this (memory leak!)
-    sprintf(mepaLabel, "L%d", mepaLabelCounter);
-
-    return mepaLabel;
+/** Mepa Label generator auxiliary structures **/
+int mepaLabelCounter = 0;
+int nextMEPALabel(){
+    return ++mepaLabelCounter;
 }
 
 /**
@@ -450,17 +442,6 @@ SymbolTableEntryPtr newPseudoFunction(int level, char* identifier, PseudoFunctio
     symbol->description.pseudoFunction = pseudoFunction;
 
     return symbol;
-}
-
-int countDigits(int number) {
-    int count = 0;
-
-    do {
-        count++;
-        number /= 10;
-    } while (number != 0);
-
-    return count;
 }
 
 /****
