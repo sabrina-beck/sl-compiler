@@ -530,6 +530,9 @@ Value processValue(TreeNodePtr node) {
 
     char* identifier = processIdentifier(node->subtrees[0]);
     SymbolTableEntryPtr entry = findIdentifier(getSymbolTable(), identifier);
+    if(entry == NULL) {
+        SemanticError("Unknown identifier");
+    }
 
     Value value = valueFromEntry(entry);
     switch(value.category) {
