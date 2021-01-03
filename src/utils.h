@@ -202,5 +202,7 @@ Value valueFromEntry(SymbolTableEntryPtr entry);
  * Debug
  ****/
 char* getSymbolTableCategoryName(SymbolTableCategory category);
+char* getTypeCategoryName(TypeCategory category);
+char* getPredefinedTypeName(PredefinedType category);
 
 #endif

@@ -142,14 +142,36 @@ ParameterDescriptorsListPtr newParameterDescriptorsRec(ParameterPtr parameter, i
     return parameterDescriptor;
 }
 
+ParameterDescriptorsListPtr inverseParametersDescriptors(ParameterDescriptorsListPtr parameters) {
+    ParameterDescriptorsListPtr current = parameters;
+    ParameterDescriptorsListPtr previous = NULL;
+    ParameterDescriptorsListPtr next = NULL;
+
+    while(current != NULL) {
+        next = current->next;
+
+        current->next = previous;
+
+        previous = current;
+        current = next;
+    }
+
+    if(previous != NULL) {
+        return previous;
+    }
+
+    return current;
+}
+
 ParameterDescriptorsListPtr newParameterDescriptors(ParameterPtr parameters) {
     int displacement = FUNCTION_PARAMETERS_DISPLACEMENT;
+
     return newParameterDescriptorsRec(parameters, &displacement);
 }
 
 TypeDescriptorPtr newFunctionType(FunctionHeaderPtr functionHeader) {
     FunctionTypeDescriptorPtr functionTypeDescriptor = malloc(sizeof(FunctionTypeDescriptor));
-    functionTypeDescriptor->parameters = newParameterDescriptors(functionHeader->parameters);
+    functionTypeDescriptor->parameters = inverseParametersDescriptors(newParameterDescriptors(functionHeader->parameters));
     functionTypeDescriptor->returnType = functionHeader->returnType;
 
     TypeDescriptorPtr type = malloc(sizeof(TypeDescriptorPtr));
@@ -223,7 +245,7 @@ SymbolTableEntryPtr addFunction(SymbolTablePtr symbolTable, FunctionHeaderPtr fu
     functionDescriptor->variablesDisplacement = 0;
     functionDescriptor->parametersSize = totalParametersSize(functionHeader->parameters);
     functionDescriptor->returnType = functionHeader->returnType;
-    functionDescriptor->parameters = addParameterEntries(symbolTable, functionHeader->parameters);
+    functionDescriptor->parameters = inverseParametersDescriptors(addParameterEntries(symbolTable, functionHeader->parameters));
     functionDescriptor->functionType = newFunctionType(functionHeader);
 
     if(functionHeader->returnType != NULL) {
@@ -326,9 +348,11 @@ void endFunctionLevel(SymbolTablePtr symbolTablePtr) {
 }
 
 bool equivalentTypes(TypeDescriptorPtr type1, TypeDescriptorPtr type2) {
+
     if(type1 == NULL || type2 == NULL) {
         return true;
     }
+
 
     switch (type1->category) {
         case PREDEFINED_TYPE:
@@ -527,5 +551,25 @@ char* getSymbolTableCategoryName(SymbolTableCategory category) {
             return "FUNCTION_SYMBOL";
         case LABEL_SYMBOL:
             return "LABEL_SYMBOL";
+    }
+}
+
+char* getTypeCategoryName(TypeCategory category) {
+    switch (category) {
+        case PREDEFINED_TYPE:
+            return "PREDEFINED_TYPE";
+        case ARRAY_TYPE:
+            return "ARRAY_TYPE";
+        case FUNCTION_TYPE:
+            return "FUNCTION_TYPE";
+    }
+}
+
+char* getPredefinedTypeName(PredefinedType category) {
+    switch(category) {
+        case INTEGER:
+            return "INTEGER";
+        case BOOLEAN:
+            return "BOOLEAN";
     }
 }
