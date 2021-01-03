@@ -5,31 +5,16 @@
 #include <stdio.h>
 
 /**
- * Internal variables and functions declaration
- **/
-
-
-/**
  * Always use getStack() to get the stack, it will ensure that the stack is initialized
  **/
 Stack *stack = NULL;
 
 Stack *getStack();
-
 int count(TreeNodePtr treeNodePtr, NodeCategory category);
 
-/**
- * Tree Visualization functions
- */
 void dumpSyntaxTree(TreeNodePtr node, int indent, bool isNext);
 const char *getCategoryName(NodeCategory category);
 void addIndent(int indent);
-
-
-
-/**
- * Public functions implementation
- **/
 
 /**
  * The syntax tree will be on top of the stack at the end of the parsing phase
@@ -118,10 +103,6 @@ void dumpTree(void *root) {
     dumpSyntaxTree(tree, 0, false);
 }
 
-/**
- * Internal functions implementation
- **/
-
 int count(TreeNodePtr treeNodePtr, NodeCategory category) {
     if (treeNodePtr == NULL) {
         return 0;
@@ -149,9 +130,6 @@ Stack *getStack() {
     return stack;
 }
 
-/**
- * Tree Visualization functions
- */
 void dumpSyntaxTree(TreeNodePtr node, int indent, bool isNext) {
     if(node == NULL) {
         return;

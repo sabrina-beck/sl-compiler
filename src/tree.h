@@ -2,10 +2,6 @@
 
 #define MAX_CHILD_NODES 5
 
-/**
- * Tree internal structures
- **/
-
 typedef enum {
     FUNCTION_NODE = 1,
 
@@ -82,16 +78,9 @@ typedef struct _treeNode {
     struct _treeNode *subtrees[MAX_CHILD_NODES];
 } TreeNode, *TreeNodePtr;
 
-/**
- * Tree manipulation
- **/
+
 void *getTree();
-
 void counts(void *p, int *functions, int *funcalls, int *whiles, int *ifs, int *bin);
-
-/**
- * Tree generation functions used by the parser
- **/
 
 /**
  * Initializes a tree node considering that the "numberOfChildNodes" top elements on the stack

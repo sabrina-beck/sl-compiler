@@ -5,23 +5,17 @@
 
 #define FUNCTION_PARAMETERS_DISPLACEMENT -5;
 
-/** Auxiliary structures private functions **/
+int currentFunctionLevel = 0;
 int totalParametersSize(ParameterPtr parameter);
 
-/** Level counter **/
-int currentFunctionLevel = 0;
-
-/***********************************************************************************************************************
+/**
  * Symbol Table
- **********************************************************************************************************************/
-/* Private Declarations */
+ **/
 void initializeSymbolTable();
 void addSymbolTableEntry(SymbolTableEntryPtr entry);
 
 ParameterDescriptorsListPtr newParameterDescriptors(ParameterPtr parameter);
 ParameterDescriptorsListPtr addParameterEntries(ParameterPtr parameters);
-
-/* Implementation */
 
 SymbolTablePtr symbolTable = NULL;
 SymbolTablePtr getSymbolTable() {
@@ -195,7 +189,6 @@ void addVariable(char* identifier, TypeDescriptorPtr typeDescriptor) {
     addSymbolTableEntry(symbol);
 }
 
-/* Private implementations */
 
 TypeDescriptorPtr newPredefinedTypeDescriptor(int size, PredefinedType predefinedType) {
 
@@ -233,7 +226,6 @@ void addPseudoFunction(int level, char* identifier, PseudoFunction pseudoFunctio
 
 void initializeSymbolTable() {
 
-    /* predefined types descriptors */
     TypeDescriptorPtr integerTypeDescriptor = newPredefinedTypeDescriptor(1, INTEGER);
     TypeDescriptorPtr booleanTypeDescriptor = newPredefinedTypeDescriptor(1, BOOLEAN);
 
@@ -242,15 +234,12 @@ void initializeSymbolTable() {
     symbolTable->integerTypeDescriptor = integerTypeDescriptor;
     symbolTable->booleanTypeDescriptor = booleanTypeDescriptor;
 
-    /* predefined types */
     addType("integer", integerTypeDescriptor);
     addType("boolean", booleanTypeDescriptor);
 
-    /* predefined constants */
     addConstant(0, "false", 0, booleanTypeDescriptor);
     addConstant(0, "true", 1, booleanTypeDescriptor);
 
-    /* pseudo functions */
     addPseudoFunction(0, "read", READ);
     addPseudoFunction(0, "write", WRITE);
 }
@@ -326,9 +315,9 @@ ParameterDescriptorsListPtr addParameterEntries(ParameterPtr parameters) {
     return parameterDescriptors;
 }
 
-/***********************************************************************************************************************
+/**
  * Level counter
- **********************************************************************************************************************/
+ **/
 int getFunctionLevel() {
     return currentFunctionLevel;
 }
@@ -362,26 +351,23 @@ void endFunctionLevel() {
     free(auxStack);
 }
 
-/***********************************************************************************************************************
+/**
  * MEPA label counter
- **********************************************************************************************************************/
+ **/
 int mepaLabelCounter = 0;
 int nextMEPALabel(){
     return ++mepaLabelCounter;
 }
 
-/***********************************************************************************************************************
+/**
  * Type Compatibility
- **********************************************************************************************************************/
-/* Private Declarations */
+ **/
 bool equivalentParameters(ParameterDescriptorsListPtr params1, ParameterDescriptorsListPtr params2);
-
-/* Implementations */
 
 bool equivalentTypes(TypeDescriptorPtr type1, TypeDescriptorPtr type2) {
 
     if(type1 == NULL || type2 == NULL) {
-        return true; // the compiler askes the equivalence even if one of the types are not present
+        return true; // the compiler asks the equivalence even if one of the types are not present
     }
 
     switch (type1->category) {
@@ -407,8 +393,6 @@ bool equivalentTypes(TypeDescriptorPtr type1, TypeDescriptorPtr type2) {
     }
 }
 
-/* Private implementations */
-
 bool equivalentParameters(ParameterDescriptorsListPtr params1, ParameterDescriptorsListPtr params2) {
     ParameterDescriptorsListPtr currentParam1 = params1;
     ParameterDescriptorsListPtr currentParam2 = params2;
@@ -433,16 +417,12 @@ bool equivalentParameters(ParameterDescriptorsListPtr params1, ParameterDescript
     return true;
 }
 
-/***********************************************************************************************************************
+/**
  * Auxiliary structures functions
- **********************************************************************************************************************/
-/* Private declarations */
-
+ **/
 Value variableSymbolToValue(SymbolTableEntryPtr entry);
 Value parameterSymbolToValue(SymbolTableEntryPtr entry);
 Value constantSymbolToValue(SymbolTableEntryPtr entry);
-
-/* Implementations */
 
 ParameterPtr concatenateParameters(ParameterPtr parameters1, ParameterPtr parameters2) {
     if(parameters1 == NULL) {
@@ -490,8 +470,6 @@ void freeFunctionHeader(FunctionHeaderPtr functionHeader) {
 
     free(functionHeader);
 }
-
-/* Private Implementations */
 
 Value variableSymbolToValue(SymbolTableEntryPtr entry) {
     Value value;
@@ -568,9 +546,9 @@ int totalParametersSize(ParameterPtr parameter) {
     return size;
 }
 
-/***********************************************************************************************************************
+/**
  * Debug facilities
- **********************************************************************************************************************/
+ **/
 char* getSymbolTableCategoryName(SymbolTableCategory category) {
     switch (category) {
         case TYPE_SYMBOL:

@@ -5,14 +5,14 @@
 #ifndef DATA_STRUCTURES_HEADER
 #define DATA_STRUCTURES_HEADER
 
-/***********************************************************************************************************************
+/**
  * Boolean definition
- **********************************************************************************************************************/
+ **/
 typedef enum {false, true} bool;
 
-/***********************************************************************************************************************
+/**
  * Stack
- **********************************************************************************************************************/
+ **/
 typedef struct _linkedNode {
     void* data;
     struct _linkedNode* next;
@@ -23,19 +23,8 @@ typedef struct _stack {
     int size ;
 } Stack;
 
-/*
- * Creates new stack pointer
- */
 Stack* newStack();
-
-/*
- * Pushes an item with data on top of the stack
- */
 void push(Stack* stack, void* data);
-
-/*
- * Pops an items data from the top of the stack
- */
 void* pop(Stack* stack);
 
 /*
@@ -46,21 +35,18 @@ void* pop(Stack* stack);
  */
 void* find(Stack* stack, void* secondParam, bool (*predicate)(void*, void*));
 
-/***********************************************************************************************************************
+/**
  * Code generation functions
- **********************************************************************************************************************/
+ **/
 /*
  * Adds a new Mepa command to the output
  */
 void addCommand(const char* commandFormat, ...);
 
 
-/***********************************************************************************************************************
+/**
  * Semantic Error Treatment
- **********************************************************************************************************************/
-/*
- * Throws a semantic error
- */
+ **/
 void throwSemanticError(const char* messageFormat, ...);
 
 #endif

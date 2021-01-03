@@ -6,9 +6,9 @@
 
 #include <stdlib.h>
 
-/***********************************************************************************************************************
+/**
  * Code gen functions Declaration
- **********************************************************************************************************************/
+ **/
 
 void processMainFunction(TreeNodePtr node);
 void processFunction(TreeNodePtr node);
@@ -37,7 +37,6 @@ void processVariableDeclaration(TreeNodePtr node);
 
 void processFunctions(TreeNodePtr node);
 
-/* Identifier & Type */
 TypeDescriptorPtr processIdentifierAsType(TreeNodePtr node);
 char* processIdentifier(TreeNodePtr node);
 
@@ -110,9 +109,9 @@ TypeDescriptorPtr processMultiplicativeOperator(TreeNodePtr node);
 TreeNodePtr getValueExpression(TreeNodePtr node);
 
 
-/***********************************************************************************************************************
+/**
  * Semantic error treatment declarations
- **********************************************************************************************************************/
+ **/
 
 void mainFunctionSemanticCheck(FunctionHeaderPtr functionHeader);
 void LabelAlreadyDefinedError(char* identifier);
@@ -122,9 +121,9 @@ void UnexpectedSymbolEntryCategoryError02(char* expected, SymbolTableCategory go
 void UnexpectedNodeCategoryError(NodeCategory expected, NodeCategory gotten);
 void UnexpectedChildNodeCategoryError(NodeCategory fatherNodeCategory, NodeCategory childNodeCategory);
 
-/***********************************************************************************************************************
+/**
  * Code gen functions Implementation
- **********************************************************************************************************************/
+ **/
 void processProgram(void *p) {
     TreeNodePtr treeRoot = (TreeNodePtr) p;
 
@@ -147,7 +146,6 @@ void processMainFunction(TreeNodePtr node) {
 
     processBlock(node->subtrees[1]);
 
-    // Deallocates the declared variables
     if(functionDescriptor->variablesDisplacement > 0) {
         addCommand("DLOC %d", functionDescriptor->variablesDisplacement);
     }
@@ -173,7 +171,6 @@ void processFunction(TreeNodePtr node) {
     processBlock(node->subtrees[1]);
 
     addCommand("L%d: NOOP", functionDescriptor->returnMepaLabel);
-    // Deallocates the declared variables
     if(functionDescriptor->variablesDisplacement > 0) {
         addCommand("DLOC %d", functionDescriptor->variablesDisplacement);
     }
@@ -223,7 +220,6 @@ ParameterPtr processFormalParameter(TreeNodePtr node) {
             UnexpectedChildNodeCategoryError(FUNCTION_HEADER_NODE, node->category);
     }
 
-    // process the formal parameters in their declaration order
     ParameterPtr nextParameters = processFormalParameter(node->next);
 
     return concatenateParameters(parameters, nextParameters);
@@ -309,7 +305,6 @@ void processBlock(TreeNodePtr node) {
     processVariables(node->subtrees[2]);
 
     FunctionDescriptorPtr functionDescriptor = findCurrentFunctionDescriptor();
-    // Allocates the declared variables space on stack
     if(functionDescriptor->variablesDisplacement > 0) {
         addCommand("ALOC %d", functionDescriptor->variablesDisplacement);
     }
@@ -317,7 +312,6 @@ void processBlock(TreeNodePtr node) {
     TreeNodePtr functionsNode = node->subtrees[3];
     // Jumps the nested declared functions instructions and goes directly to the current functions body
     if(functionsNode != NULL) {
-        // generate functions body label only if necessary
         if(functionDescriptor->bodyMepaLabel <= 0) {
             functionDescriptor->bodyMepaLabel = nextMEPALabel();
         }
@@ -429,8 +423,6 @@ void processFunctions(TreeNodePtr node) {
     }
 }
 
-/* Identifier & Type */
-
 TypeDescriptorPtr processIdentifierAsType(TreeNodePtr node) {
 
     char* identifier = processIdentifier(node);
@@ -488,8 +480,6 @@ TypeDescriptorPtr processArraySizeDeclaration(TreeNodePtr node, TypeDescriptorPt
     return newArrayType(dimension, elementType);
 }
 
-/* Body */
-
 void processBody(TreeNodePtr node) {
     if(node->category != BODY_NODE) {
         UnexpectedNodeCategoryError(BODY_NODE, node->category);
@@ -546,8 +536,7 @@ void processLabel(TreeNodePtr node) {
     LabelDescriptorPtr labelDescriptor = symbolTableEntry->description.labelDescriptor;
     labelDescriptor->defined = true;
 
-    // since there are only statements at this level, the current activation record displacement on the stack
-    // will always be equal to the size of its allocated variables
+    // current activation record displacement = its allocated variables displacement
     FunctionDescriptorPtr functionDescriptor = findCurrentFunctionDescriptor();
     addCommand("L%d: ENLB %d,%d  \t%s:",
                labelDescriptor->mepaLabel,
@@ -617,9 +606,6 @@ void processAssignment(TreeNodePtr node) {
     }
 }
 
-/*
- * If it is an array, generates code to leave the address of it's indexed position on top of the stack will be generated
- */
 Value processValue(TreeNodePtr node) {
     if(node->category != VALUE_NODE) {
         UnexpectedNodeCategoryError(VALUE_NODE, node->category);
@@ -728,7 +714,6 @@ TypeDescriptorPtr processFunctionParameterCall(TreeNodePtr node, SymbolTableEntr
         throwSemanticError("Expected function as parameter");
     }
 
-    // Allocates space on stack for the return value, if it exists
     TypeDescriptorPtr returnType = parameterType->description.functionTypeDescriptor->returnType;
     if(returnType!= NULL && returnType->size > 0) {
         addCommand("ALOC %d  \tresult", returnType->size);
@@ -749,7 +734,6 @@ TypeDescriptorPtr processFunctionParameterCall(TreeNodePtr node, SymbolTableEntr
 TypeDescriptorPtr processRegularFunctionCall(TreeNodePtr node, SymbolTableEntryPtr functionEntry) {
     FunctionDescriptorPtr functionDescriptor = functionEntry->description.functionDescriptor;
 
-    // Allocates space on stack for the return value, if it exists
     TypeDescriptorPtr returnType = functionDescriptor->returnType;
     if(returnType!= NULL && returnType->size > 0) {
         addCommand("ALOC %d  \tresult", returnType->size);
@@ -942,11 +926,11 @@ void processFunctionParameterAsArgument(ParameterDescriptorPtr expectedParameter
     }
 
     // generalized address is already on the stack as the current function parameter
-    // load the MEPA address
+    // MEPA address
     addCommand("LDVL %s,%d", valueEntry->level, argumentDescriptor->displacement);
-    // load the value of the base register D[k]
+    // base register D[k]
     addCommand("LDVL %s,%d", valueEntry->level, argumentDescriptor->displacement + 1);
-    // load the level k
+    // level k
     addCommand("LDVL %s,%d", valueEntry->level, argumentDescriptor->displacement + 2);
 }
 
@@ -975,9 +959,9 @@ void processReturn(TreeNodePtr node) {
     FunctionDescriptorPtr functionDescriptor = findCurrentFunctionDescriptor();
 
     TreeNodePtr expressionNode = node->subtrees[0];
-    if(expressionNode != NULL && functionDescriptor->returnType != NULL) { // return with value from a function with return type
+    if(expressionNode != NULL && functionDescriptor->returnType != NULL) {
         processReturnWithValue(expressionNode, functionDescriptor);
-    } else if (expressionNode == NULL && functionDescriptor->returnType == NULL) { // void return in void function
+    } else if (expressionNode == NULL && functionDescriptor->returnType == NULL) {
         addCommand("JUMP L%d", functionDescriptor->returnMepaLabel);
     } else if(functionDescriptor->returnType == NULL) {
         throwSemanticError("Can't return value for void function");
@@ -987,8 +971,7 @@ void processReturn(TreeNodePtr node) {
 }
 
 void processReturnWithValue(TreeNodePtr expressionNode, FunctionDescriptorPtr functionDescriptor) {
-    // if the return type is an array we must load the array address on top of the stack
-    // before loading the values to be stored on the return displacement
+    // the returned array address must be loaded before the values to be stored on the return displacement
     if(functionDescriptor->returnType->size > 1) {
         addCommand("LADR %d,%d", getFunctionLevel(), functionDescriptor->returnDisplacement);
     }
@@ -998,9 +981,9 @@ void processReturnWithValue(TreeNodePtr expressionNode, FunctionDescriptorPtr fu
         throwSemanticError("Expression with type different than function return type");
     }
 
-    if(expressionType->size == 1) { // return single value
+    if(expressionType->size == 1) {
         addCommand("STVL %d,%d", getFunctionLevel(), functionDescriptor->returnDisplacement);
-    } else { // return array
+    } else {
         addCommand("STMV %d,%d", getFunctionLevel(), functionDescriptor->returnDisplacement);
     }
     addCommand("JUMP L%d", functionDescriptor->returnMepaLabel);
@@ -1344,7 +1327,6 @@ TypeDescriptorPtr processUnaryOperator(TreeNodePtr node) {
     TreeNodePtr operatorNode = node->subtrees[0];
     switch (operatorNode->category) {
         case PLUS_NODE:
-            // this operator has no practical effect
             return getSymbolTable()->integerTypeDescriptor;
         case MINUS_NODE:
             addCommand("NEGT");
@@ -1378,7 +1360,6 @@ TypeDescriptorPtr processMultiplicativeOperator(TreeNodePtr node) {
     }
 }
 
-/* If the expression is not a single factor, then it is a semantic error */
 TreeNodePtr getValueExpression(TreeNodePtr node) {
     TreeNodePtr binaryOpExpressionNode = node->subtrees[0];
     if(binaryOpExpressionNode->category != BINARY_OPERATOR_EXPRESSION_NODE) {
@@ -1422,9 +1403,9 @@ TreeNodePtr getValueExpression(TreeNodePtr node) {
     return valueNode;
 }
 
-/***********************************************************************************************************************
+/**
  * Semantic error treatment implementation
- **********************************************************************************************************************/
+ **/
 
 void mainFunctionSemanticCheck(FunctionHeaderPtr functionHeader) {
     if(functionHeader->returnType != NULL) {

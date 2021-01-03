@@ -4,9 +4,9 @@
 #include <stdlib.h>
 #include "utils.h"
 
-/***********************************************************************************************************************
+/**
  * Symbol Table definitions
- **********************************************************************************************************************/
+ **/
 
 typedef enum {
     VALUE_PARAMETER,
@@ -31,11 +31,11 @@ typedef enum {
 } PseudoFunction;
 
 typedef enum {
-    TYPE_SYMBOL, // boolean and integer
-    CONSTANT_SYMBOL, // true and false
+    TYPE_SYMBOL,
+    CONSTANT_SYMBOL,
     VARIABLE_SYMBOL,
     PARAMETER_SYMBOL,
-    PSEUDO_FUNCTION_SYMBOL, // deal with read and write psudo functions
+    PSEUDO_FUNCTION_SYMBOL,
     FUNCTION_SYMBOL,
     LABEL_SYMBOL,
 } SymbolTableCategory;
@@ -45,7 +45,7 @@ struct _ParameterDescriptor;
 struct _ParametersList;
 
 typedef struct {
-    int dimension; // number of elements
+    int dimension;
     struct _TypeDescriptor* elementType;
 } ArrayDescriptor, *ArrayDescriptorPtr;
 
@@ -57,7 +57,7 @@ typedef struct {
 typedef struct _TypeDescriptor {
     TypeCategory category;
     int size;
-    union { // depends on constr
+    union {
         PredefinedType predefinedType;
         ArrayDescriptorPtr arrayDescriptor;
         FunctionTypeDescriptorPtr functionTypeDescriptor;
@@ -106,7 +106,7 @@ typedef struct {
     SymbolTableCategory category;
     char* identifier;
     int level;
-    union { // it depends on category type
+    union {
         TypeDescriptorPtr typeDescriptor;
         ConstantDescriptorPtr constantDescriptor;
         VariableDescriptorPtr variableDescriptor;
@@ -124,9 +124,9 @@ typedef struct {
     TypeDescriptorPtr booleanTypeDescriptor;
 } SymbolTable, *SymbolTablePtr;
 
-/***********************************************************************************************************************
+/**
  * Auxiliary structures
- **********************************************************************************************************************/
+ **/
 
 struct _FunctionHeader;
 
@@ -156,41 +156,31 @@ typedef struct {
     TypeDescriptorPtr type;
     int level;
     union {
-        int displacement; // REFERENCE, VALUE, ARRAY_VALUE, ARRAY_REFERENCE
-        int value; // CONSTANTS
+        int displacement;
+        int value;
     } content;
 } Value;
 
-/***********************************************************************************************************************
+/**
  * Symbol Table functions
- **********************************************************************************************************************/
-/* Returns the symbol table, this symbol table implementation is not thread safe! */
+ **/
 SymbolTablePtr getSymbolTable();
 
-/* Returns the symbol table entry for the specific identifier */
 SymbolTableEntryPtr findIdentifier(char* identifier);
-/* Returns the function descriptor of the function being currently compiled */
 FunctionDescriptorPtr findCurrentFunctionDescriptor();
 
-/* Creates new function type descriptor */
 TypeDescriptorPtr newFunctionType(FunctionHeaderPtr functionHeader);
-/* Creates new array type descriptor */
 TypeDescriptorPtr newArrayType(int dimension, TypeDescriptorPtr elementType);
 
-/* Adds a new function entry to the symbol table */
 SymbolTableEntryPtr addFunction(FunctionHeaderPtr functionHeader);
-/* Adds a new function entry to the symbol table */
 FunctionDescriptorPtr addMainFunction();
-/* Adds a new label entry to the symbol table */
 void addLabel(char* identifier);
-/* Adds a new type entry to the symbol table */
 void addType(char* identifier, TypeDescriptorPtr typeDescriptor);
-/* Adds a new variable entry to the symbol table */
 void addVariable(char* identifier, TypeDescriptorPtr typeDescriptor);
 
-/***********************************************************************************************************************
+/**
  * Level counter functions
- **********************************************************************************************************************/
+ **/
 /* Gets the current function level counter value. Attention to the fact that the function level counter isn't thread safe */
 int getFunctionLevel();
 /*
@@ -201,31 +191,27 @@ int getFunctionLevel();
  */
 void endFunctionLevel();
 
-/***********************************************************************************************************************
+/**
  * MEPA label counter functions
- **********************************************************************************************************************/
+ **/
 /* A MEPA label is simply an integer counter which returns a new integer every time, it isn't thread safe */
 int nextMEPALabel();
 
-/***********************************************************************************************************************
+/**
  * Type Compatibility functions
- **********************************************************************************************************************/
-/* It checks if both types are compatible */
+ **/
 bool equivalentTypes(TypeDescriptorPtr type1, TypeDescriptorPtr type2);
 
-/***********************************************************************************************************************
+/**
  * Auxiliary structures functions
- **********************************************************************************************************************/
-/* Concatenates two parameters list, parameters1 will be at the beginning */
+ **/
 ParameterPtr concatenateParameters(ParameterPtr parameters1, ParameterPtr parameters2);
-/* Creates a Value from a Symbol Table Entry */
 Value valueFromEntry(SymbolTableEntryPtr entry);
-/* Frees function header memory */
 void freeFunctionHeader(FunctionHeaderPtr functionHeader);
 
-/***********************************************************************************************************************
+/**
  * Debug facilities --> helpers to print errors
- **********************************************************************************************************************/
+ **/
 char* getSymbolTableCategoryName(SymbolTableCategory category);
 char* getTypeCategoryName(TypeCategory category);
 char* getPredefinedTypeName(PredefinedType category);

@@ -5,15 +5,13 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-/***********************************************************************************************************************
+/**
  * Stack
- **********************************************************************************************************************/
+ **/
 
-/* Private declarations */
 LinkedNode* newLinkedNode(void* data, LinkedNode* next);
 void freeLinkedNode(LinkedNode* node);
 
-/* Implementation */
 Stack* newStack() {
     Stack* stack = malloc(sizeof(Stack));
     stack->size = 0;
@@ -55,7 +53,6 @@ void* find(Stack* stack, void* secondParam, bool (*predicate)(void*, void*)) {
     return NULL;
 }
 
-/* Private Implementations */
 LinkedNode* newLinkedNode(void* data, LinkedNode* next) {
     LinkedNode* newNode = malloc(sizeof(LinkedNode));
     newNode->data = data;
@@ -67,9 +64,9 @@ void freeLinkedNode(LinkedNode* node) {
     free(node);
 }
 
-/***********************************************************************************************************************
+/**
  * Code generation functions
- **********************************************************************************************************************/
+ **/
 
 void addCommand(const char* commandFormat, ...) {
     va_list args;
@@ -80,9 +77,9 @@ void addCommand(const char* commandFormat, ...) {
     va_end(args);
 }
 
-/***********************************************************************************************************************
+/**
  * Semantic Error Treatment
- **********************************************************************************************************************/
+ **/
 
 void throwSemanticError(const char* messageFormat, ...) {
     va_list args;
