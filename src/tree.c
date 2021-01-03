@@ -1,6 +1,6 @@
 #include "tree.h"
 
-#include "utils.h"
+#include "symboltable.h"
 #include <stdlib.h>
 #include <stdio.h>
 

@@ -1,8 +1,8 @@
 #include "codegen.h"
 #include "tree.h"
 #include "slc.h"
+#include "symboltable.h"
 #include "utils.h"
-#include "datastructures.h"
 
 #include <stdio.h>
 #include <stdlib.h>
