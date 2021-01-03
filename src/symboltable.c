@@ -273,13 +273,16 @@ ParameterDescriptorPtr newParameterDescriptor(ParameterPtr parameter, int displa
 }
 
 /*
- * The parameters list of type ParameterPtr comes from the compiles in the inversed order of its declaration
+ * The parameters list of type ParameterPtr comes from the compiler in the order of the parameters declaration
  */
 ParameterDescriptorsListPtr newParameterDescriptorsRec(ParameterPtr parameter, int* displacement) {
     if(parameter == NULL) {
         return NULL;
     }
 
+    // Process the parameters in inversed order to calculate the displacement correctly,
+    // so the first declared parameter will be in the lowest parameter position of the stack
+    // this allows pushing arguments in they declared order too
     ParameterDescriptorsListPtr nextParameters = newParameterDescriptorsRec(parameter->next, displacement);
 
     if(parameter->passage == VARIABLE_PARAMETER) {
@@ -341,17 +344,21 @@ void endFunctionLevel() {
     Stack* auxStack = newStack();
 
     SymbolTableEntryPtr lastPoped = pop(symbolTablePtr->stack);
+    // pop from the stack all entries above the new current level, since their identifiers are not accessible anymore
     while (lastPoped != NULL && lastPoped->level > currentFunctionLevel) {
+
+        // functions are an exception, so we keep track of all functions declared in level above
         if (lastPoped->category == FUNCTION_SYMBOL) {
             if(lastPoped->level == currentFunctionLevel + 1) {
-                push(auxStack, lastPoped);
+                push(auxStack, lastPoped); //
             }
         }
+
         lastPoped = pop(symbolTablePtr->stack);
     }
     push(symbolTablePtr->stack, lastPoped);
 
-    // pushing back the functions at level+1 that are still accessible
+    // pushing back the functions at level+1 that will be still accessible
     while (auxStack->top != NULL) {
         SymbolTableEntryPtr poped = pop(auxStack);
         push(symbolTablePtr->stack, poped);
@@ -378,7 +385,7 @@ bool equivalentParameters(ParameterDescriptorsListPtr params1, ParameterDescript
 bool equivalentTypes(TypeDescriptorPtr type1, TypeDescriptorPtr type2) {
 
     if(type1 == NULL || type2 == NULL) {
-        return true;
+        return true; // the compiler askes the equivalence even if one of the types are not present
     }
 
     switch (type1->category) {
@@ -422,6 +429,7 @@ bool equivalentParameters(ParameterDescriptorsListPtr params1, ParameterDescript
         currentParam2 = currentParam2->next;
     }
 
+    // a different number of parameters between function types makes them incompatible
     if(currentParam1 != NULL || currentParam2 != NULL) {
         return false;
     }
@@ -434,6 +442,7 @@ bool equivalentParameters(ParameterDescriptorsListPtr params1, ParameterDescript
  **********************************************************************************************************************/
 /* Private declarations */
 
+Value variableSymbolToValue(SymbolTableEntryPtr entry);
 Value parameterSymbolToValue(SymbolTableEntryPtr entry);
 Value constantSymbolToValue(SymbolTableEntryPtr entry);
 
@@ -457,6 +466,27 @@ ParameterPtr concatenateParameters(ParameterPtr parameters1, ParameterPtr parame
     return parameters1;
 }
 
+Value valueFromEntry(SymbolTableEntryPtr entry) {
+    switch(entry->category) {
+        case VARIABLE_SYMBOL: {
+            return variableSymbolToValue(entry);
+        }
+        case PARAMETER_SYMBOL: {
+            return parameterSymbolToValue(entry);
+        }
+        case CONSTANT_SYMBOL: {
+            return constantSymbolToValue(entry);
+        }
+        default: {
+            fprintf(stderr, "Unexpected entry category to convert to Value\n");
+            exit(0);
+        }
+    }
+}
+
+
+/* Private Implementations */
+
 Value variableSymbolToValue(SymbolTableEntryPtr entry) {
     Value value;
     value.type = entry->description.variableDescriptor->type;
@@ -478,26 +508,6 @@ Value variableSymbolToValue(SymbolTableEntryPtr entry) {
 
     return value;
 }
-
-Value valueFromEntry(SymbolTableEntryPtr entry) {
-    switch(entry->category) {
-        case VARIABLE_SYMBOL: {
-            return variableSymbolToValue(entry);
-        }
-        case PARAMETER_SYMBOL: {
-            return parameterSymbolToValue(entry);
-        }
-        case CONSTANT_SYMBOL: {
-            return constantSymbolToValue(entry);
-        }
-        default: {
-            fprintf(stderr, "Unexpected entry category to convert to Value\n");
-            exit(0);
-        }
-    }
-}
-
-/* Private Implementations */
 
 Value parameterSymbolToValue(SymbolTableEntryPtr entry) {
     Value value;
