@@ -111,4 +111,3 @@ void UnexpectedChildNodeCategoryError(NodeCategory fatherNodeCategory, NodeCateg
 
 /** Queue with the final program **/
 void addCommand(const char* commandFormat, ...);
-void printProgram();

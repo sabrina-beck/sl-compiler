@@ -24,7 +24,7 @@ extern char *yytext;
 void SemanticError(char *s) {
 
   // No line number info on trees
-  printf("%s\n", s);
+  //printf("%s\n", s);
   printf("Semantic error.\n");
   exit(0);
   

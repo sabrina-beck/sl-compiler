@@ -15,8 +15,6 @@ void processProgram(void *p) {
     processMainFunction(treeRoot);
 
     addCommand("      END ");
-
-    printProgram();
 }
 
 void processMainFunction(TreeNodePtr node) {
@@ -1340,34 +1338,12 @@ void UnexpectedChildNodeCategoryError(NodeCategory fatherNodeCategory, NodeCateg
 }
 
 /** Program String managament functions **/
-Queue *programQueue = NULL;
-Queue *getProgramQueue() {
-    if(programQueue == NULL) {
-        programQueue = newQueue();
-    }
-    return programQueue;
-}
-
 void addCommand(const char* commandFormat, ...) {
-    Queue* programQueue = getProgramQueue();
-
     va_list args;
     va_start(args, commandFormat);
-    char* command = malloc(sizeof(char)*255);
-    vsprintf(command, commandFormat, args);
+    vprintf(commandFormat, args);
+    printf("\n");
     va_end(args);
-
-    enqueue(programQueue, command);
-}
-
-void printProgram() {
-    Queue* programQueue = getProgramQueue();
-
-    while (programQueue->size > 0) {
-        char* command = (char*) dequeue(programQueue);
-        printf("%s\n", command);
-        free(command);
-    }
 }
 
 /**
