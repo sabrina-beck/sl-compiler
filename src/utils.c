@@ -1,14 +1,18 @@
 #include "utils.h"
 
 #include <stdlib.h>
+#include <stdarg.h>
+#include <stdio.h>
 
-/** Auxiliary functions for memory allocation and deallocation of the stack nodes **/
+/***********************************************************************************************************************
+ * Stack
+ **********************************************************************************************************************/
+
+/* Private declarations */
 LinkedNode* newLinkedNode(void* data, LinkedNode* next);
 void freeLinkedNode(LinkedNode* node);
 
-/**
- * Public definitions implementation for Stack
- **/
+/* Implementation */
 Stack* newStack() {
     Stack* stack = malloc(sizeof(Stack));
     stack->size = 0;
@@ -50,9 +54,7 @@ void* find(Stack* stack, void* secondParam, bool (*predicate)(void*, void*)) {
     return NULL;
 }
 
-/**
- * Private definitions implementation
- **/
+/* Private Implementations */
 LinkedNode* newLinkedNode(void* data, LinkedNode* next) {
     LinkedNode* newNode = malloc(sizeof(LinkedNode));
     newNode->data = data;
@@ -62,4 +64,17 @@ LinkedNode* newLinkedNode(void* data, LinkedNode* next) {
 
 void freeLinkedNode(LinkedNode* node) {
     free(node);
+}
+
+/***********************************************************************************************************************
+ * Code generation functions
+ **********************************************************************************************************************/
+
+void addCommand(const char* commandFormat, ...) {
+    va_list args;
+    va_start(args, commandFormat);
+    printf("\t");
+    vprintf(commandFormat, args);
+    printf("\n");
+    va_end(args);
 }

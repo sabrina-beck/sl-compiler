@@ -21,7 +21,7 @@ for testFile in tests/sl/*; do
   ./build/main < $testFile > $resultProgram
 
   expectedResponsePath=$(find tests/mep -regextype posix-egrep -regex ".*$testNumber.*")
-  DIFF=$(diff -b $resultProgram $expectedResponsePath)
+  DIFF=$(diff -bBw $resultProgram $expectedResponsePath)
   if [ "$DIFF" != "" ]
   then
     echo -e " | ${RED}FAILED${NO_COLOR}"

@@ -8,7 +8,7 @@ void processProgram(void *p) {
 
     processMainFunction(treeRoot);
 
-    addCommand("      END ");
+    addCommand("END");
 }
 
 void processMainFunction(TreeNodePtr node) {
@@ -25,14 +25,14 @@ void processMainFunction(TreeNodePtr node) {
     }
     FunctionDescriptorPtr functionDescriptor = addMainFunction();
 
-    addCommand("      MAIN");
+    addCommand("MAIN");
 
     processBlock(node->subtrees[1]);
 
     if(functionDescriptor->variablesDisplacement > 0) {
-        addCommand("      DLOC   %d", functionDescriptor->variablesDisplacement);
+        addCommand("DLOC %d", functionDescriptor->variablesDisplacement);
     }
-    addCommand("      STOP");
+    addCommand("STOP");
 }
 
 void processFunction(TreeNodePtr node) {
@@ -45,22 +45,22 @@ void processFunction(TreeNodePtr node) {
     SymbolTableEntryPtr entry = addFunction(functionHeader);
     FunctionDescriptorPtr functionDescriptor = entry->description.functionDescriptor;
 
-    addCommand("L%d:   ENFN   %d         %s",
+    addCommand("L%d: ENFN %d  \t%s",
                functionDescriptor->headerMepaLabel,
                entry->level,
                entry->identifier);
 
     if(functionDescriptor->variablesDisplacement > 0) {
-        addCommand("      ALOC   %d", functionDescriptor->variablesDisplacement);
+        addCommand("ALOC %d", functionDescriptor->variablesDisplacement);
     }
 
     processBlock(node->subtrees[1]);
 
-    addCommand("L%d:   NOOP             ", functionDescriptor->returnMepaLabel);
+    addCommand("L%d: NOOP", functionDescriptor->returnMepaLabel);
     if(functionDescriptor->variablesDisplacement > 0) {
-        addCommand("      DLOC   %d", functionDescriptor->variablesDisplacement);
+        addCommand("DLOC %d", functionDescriptor->variablesDisplacement);
     }
-    addCommand("      RTRN   %d        end function", functionDescriptor->parametersSize);
+    addCommand("RTRN %d  \tend function", functionDescriptor->parametersSize);
 
     endFunctionLevel();
 }
@@ -186,7 +186,7 @@ void processBlock(TreeNodePtr node) {
 
     FunctionDescriptorPtr functionDescriptor = findCurrentFunctionDescriptor();
     if(functionDescriptor->variablesDisplacement > 0) {
-        addCommand("      ALOC   %d", functionDescriptor->variablesDisplacement);
+        addCommand("ALOC %d", functionDescriptor->variablesDisplacement);
     }
 
     TreeNodePtr functionsNode = node->subtrees[3];
@@ -194,13 +194,13 @@ void processBlock(TreeNodePtr node) {
         if(functionDescriptor->bodyMepaLabel <= 0) { // generate Main functions label only if necessary
             functionDescriptor->bodyMepaLabel = nextMEPALabel();
         }
-        addCommand("      JUMP   L%d", functionDescriptor->bodyMepaLabel);
+        addCommand("JUMP L%d", functionDescriptor->bodyMepaLabel);
     }
     processFunctions(functionsNode);
 
 
     if(functionsNode != NULL) {
-        addCommand("L%d:   NOOP             body", functionDescriptor->bodyMepaLabel);
+        addCommand("L%d: NOOP  \tbody", functionDescriptor->bodyMepaLabel);
     }
     processBody(node->subtrees[4]);
 
@@ -422,7 +422,7 @@ void processLabel(TreeNodePtr node) {
     // since there are only statements at this level, the current activation record displacement on the stack
     // will always be equal to the size of its alocated variables
     FunctionDescriptorPtr functionDescriptor = findCurrentFunctionDescriptor();
-    addCommand("L%d:   ENLB   %d,%d        %s:",
+    addCommand("L%d: ENLB %d,%d  \t%s:",
                labelDescriptor->mepaLabel,
                symbolTableEntry->level,
                functionDescriptor->variablesDisplacement,
@@ -476,13 +476,13 @@ void processAssignment(TreeNodePtr node) {
     switch (value.category) {
         case ARRAY_VALUE:
         case ARRAY_REFERENCE:
-            addCommand("      STMV   %d", value.type->size);
+            addCommand("STMV %d", value.type->size);
             break;
         case REFERENCE:
-            addCommand("      STVI   %d,%d", value.level, value.content.displacement);
+            addCommand("STVI %d,%d", value.level, value.content.displacement);
             break;
         case VALUE:
-            addCommand("      STVL   %d,%d", value.level, value.content.displacement);
+            addCommand("STVL %d,%d", value.level, value.content.displacement);
             break;
         case CONSTANT:
             SemanticError("Constants can't be assigned");
@@ -524,10 +524,10 @@ Value processValue(TreeNodePtr node) {
 void loadArrayBaseAddress(Value value) {
     switch (value.category) {
         case ARRAY_VALUE:
-            addCommand("      LADR   %d,%d", value.level, value.content.displacement);
+            addCommand("LADR %d,%d", value.level, value.content.displacement);
             break;
         case ARRAY_REFERENCE:
-            addCommand("      LDVL   %d,%d", value.level, value.content.displacement);
+            addCommand("LDVL %d,%d", value.level, value.content.displacement);
             break;
         default:
             return;
@@ -563,7 +563,7 @@ void processArrayIndex(TreeNodePtr node, Value* value) {
     }
 
     TypeDescriptorPtr arrayElementType = value->type->description.arrayDescriptor->elementType;
-    addCommand("      INDX   %d", arrayElementType->size);
+    addCommand("INDX %d", arrayElementType->size);
 
     value->type = arrayElementType;
 }
@@ -602,14 +602,14 @@ TypeDescriptorPtr processFunctionParameterCall(TreeNodePtr node, SymbolTableEntr
 
     TypeDescriptorPtr returnType = parameterType->description.functionTypeDescriptor->returnType;
     if(returnType!= NULL && returnType->size > 0) {
-        addCommand("      ALOC   %d        result", returnType->size);
+        addCommand("ALOC %d  \tresult", returnType->size);
     }
 
     ParameterDescriptorsListPtr expectedParameters =
             parameterType->description.functionTypeDescriptor->parameters;
     processArgumentsList(node->subtrees[1], expectedParameters);
 
-    addCommand("      CPFN   %d,%d,%d",
+    addCommand("CPFN %d,%d,%d",
                functionEntry->level,
                parameterDescriptor->displacement,
                getFunctionLevel());
@@ -622,11 +622,11 @@ TypeDescriptorPtr processRegularFunctionCall(TreeNodePtr node, SymbolTableEntryP
 
     TypeDescriptorPtr returnType = functionDescriptor->returnType;
     if(returnType!= NULL && returnType->size > 0) {
-        addCommand("      ALOC   %d        result", returnType->size);
+        addCommand("ALOC %d  \tresult", returnType->size);
     }
 
     processArgumentsList(node->subtrees[1], functionDescriptor->parameters);
-    addCommand("      CFUN   L%d,%d", functionDescriptor->headerMepaLabel, getFunctionLevel());
+    addCommand("CFUN L%d,%d", functionDescriptor->headerMepaLabel, getFunctionLevel());
 
     return functionDescriptor->returnType;
 }
@@ -653,7 +653,7 @@ void processReadFunctionCall(TreeNodePtr argumentNode) {
         return;
     }
 
-    addCommand("      READ");
+    addCommand("READ");
 
     TreeNodePtr valueNode = getVariableExpression(argumentNode);
     Value value = processValue(valueNode);
@@ -665,13 +665,13 @@ void processReadFunctionCall(TreeNodePtr argumentNode) {
     switch (value.category) {
         case ARRAY_VALUE:
         case ARRAY_REFERENCE:
-            addCommand("      STMV   1");
+            addCommand("STMV 1");
             break;
         case REFERENCE:
-            addCommand("      STVI   %d,%d", value.level, value.content.displacement);
+            addCommand("STVI %d,%d", value.level, value.content.displacement);
             break;
         case VALUE:
-            addCommand("      STVL   %d,%d", value.level, value.content.displacement);
+            addCommand("STVL %d,%d", value.level, value.content.displacement);
             break;
         case CONSTANT:
             SemanticError("Can't read boolean value");
@@ -687,7 +687,7 @@ void processWriteFunctionCall(TreeNodePtr argumentNode) {
     }
 
     processExpression(argumentNode);
-    addCommand("      PRNT");
+    addCommand("PRNT");
 
     processWriteFunctionCall(argumentNode->next);
 }
@@ -749,10 +749,10 @@ void processArgumentByReference(ParameterDescriptorPtr expectedParameter, TreeNo
             // process value already left the address on top of the stack
             break;
         case REFERENCE:
-            addCommand("      LDVL   %d,%d", value.level, value.content.displacement);
+            addCommand("LDVL %d,%d", value.level, value.content.displacement);
             break;
         case VALUE:
-            addCommand("      LADR   %d,%d", value.level, value.content.displacement);
+            addCommand("LADR %d,%d", value.level, value.content.displacement);
             break;
         case CONSTANT:
             SemanticError("Can't pass constant by reference");
@@ -793,7 +793,7 @@ void processDeclaredFunctionAsArgument(ParameterDescriptorPtr expectedParameter,
         SemanticError("Wrong parameter type on function");
     }
 
-    addCommand("      LGAD   L%d,%d",
+    addCommand("LGAD L%d,%d",
                valueEntry->description.functionDescriptor->headerMepaLabel,
                valueEntry->level - 1);
 }
@@ -812,11 +812,11 @@ void processFunctionParameterAsArgument(ParameterDescriptorPtr expectedParameter
 
     // generalized address is already on the stack as the current function parameter
     // load the MEPA address
-    addCommand("      LDVL   %s,%d", valueEntry->level, argumentDescriptor->displacement);
+    addCommand("LDVL %s,%d", valueEntry->level, argumentDescriptor->displacement);
     // load the value of the base register D[k]
-    addCommand("      LDVL   %s,%d", valueEntry->level, argumentDescriptor->displacement + 1);
+    addCommand("LDVL %s,%d", valueEntry->level, argumentDescriptor->displacement + 1);
     // load the level k
-    addCommand("      LDVL   %s,%d", valueEntry->level, argumentDescriptor->displacement + 2);
+    addCommand("LDVL %s,%d", valueEntry->level, argumentDescriptor->displacement + 2);
 }
 
 /* If the expression is not a single factor, then it is a semantic error */
@@ -875,7 +875,7 @@ void processGoto(TreeNodePtr node) {
         UnexpectedSymbolEntryCategoryError(LABEL_SYMBOL, labelEntry->category);
     }
 
-    addCommand("      JUMP   L%d         goto %s",
+    addCommand("JUMP L%d  \tgoto %s",
                labelEntry->description.labelDescriptor->mepaLabel,
                identifier);
 }
@@ -894,7 +894,7 @@ void processReturn(TreeNodePtr node) {
     if(expressionNode != NULL && functionDescriptor->returnType != NULL) {
         processReturnWithValue(expressionNode, functionDescriptor);
     } else if (expressionNode == NULL && functionDescriptor->returnType == NULL) {
-        addCommand("      JUMP   L%d", functionDescriptor->returnMepaLabel);
+        addCommand("JUMP L%d", functionDescriptor->returnMepaLabel);
     } else if(functionDescriptor->returnType == NULL) {
         SemanticError("Can't return value for void function");
     } else if(expressionNode == NULL) {
@@ -904,7 +904,7 @@ void processReturn(TreeNodePtr node) {
 
 void processReturnWithValue(TreeNodePtr expressionNode, FunctionDescriptorPtr functionDescriptor) {
     if(functionDescriptor->returnType->size > 1) {
-        addCommand("      LADR   %d,%d", getFunctionLevel(), functionDescriptor->returnDisplacement);
+        addCommand("LADR %d,%d", getFunctionLevel(), functionDescriptor->returnDisplacement);
     }
 
     TypeDescriptorPtr expressionType = processExpression(expressionNode);
@@ -913,11 +913,11 @@ void processReturnWithValue(TreeNodePtr expressionNode, FunctionDescriptorPtr fu
     }
 
     if(expressionType->size == 1) {
-        addCommand("      STVL   %d,%d", getFunctionLevel(), functionDescriptor->returnDisplacement);
+        addCommand("STVL %d,%d", getFunctionLevel(), functionDescriptor->returnDisplacement);
     } else {
-        addCommand("      STMV   %d,%d", getFunctionLevel(), functionDescriptor->returnDisplacement);
+        addCommand("STMV %d,%d", getFunctionLevel(), functionDescriptor->returnDisplacement);
     }
-    addCommand("      JUMP   L%d", functionDescriptor->returnMepaLabel);
+    addCommand("JUMP L%d", functionDescriptor->returnMepaLabel);
 }
 
 void processConditional(TreeNodePtr node) {
@@ -936,19 +936,19 @@ void processConditional(TreeNodePtr node) {
     if(!equivalentTypes(expressionType, getSymbolTable()->booleanTypeDescriptor)) {
         SemanticError("Expected boolean expression");
     }
-    addCommand("      JMPF   L%d        if", elseLabel);
+    addCommand("JMPF L%d  \tif", elseLabel);
 
     processCompound(ifCompound);
 
     if(elseCompound != NULL) {
-        addCommand("      JUMP   L%d", elseExitLabel);
+        addCommand("JUMP L%d", elseExitLabel);
 
-        addCommand("L%d:   NOOP             else", elseLabel);
+        addCommand("L%d: NOOP  \telse", elseLabel);
         processCompound(elseCompound);
 
-        addCommand("L%d:   NOOP             end if", elseExitLabel);
+        addCommand("L%d: NOOP  \tend if", elseExitLabel);
     } else {
-        addCommand("L%d:   NOOP             end if", elseLabel);
+        addCommand("L%d: NOOP  \tend if", elseLabel);
     }
 }
 
@@ -963,17 +963,17 @@ void processRepetitive(TreeNodePtr node) {
     int conditionLabel = nextMEPALabel();
     int exitLabel = nextMEPALabel();
 
-    addCommand("L%d:   NOOP             while", conditionLabel);
+    addCommand("L%d: NOOP  \twhile", conditionLabel);
     TypeDescriptorPtr expressionType = processExpression(conditionNode);
     if(!equivalentTypes(expressionType, getSymbolTable()->booleanTypeDescriptor)) {
         SemanticError("Expected boolean expression");
     }
-    addCommand("      JMPF   L%d", exitLabel);
+    addCommand("JMPF L%d", exitLabel);
 
     processCompound(compoundNode);
-    addCommand("      JUMP   L%d", conditionLabel);
+    addCommand("JUMP L%d", conditionLabel);
 
-    addCommand("L%d:   NOOP             end while", exitLabel);
+    addCommand("L%d: NOOP  \tend while", exitLabel);
 
 }
 
@@ -1147,19 +1147,19 @@ TypeDescriptorPtr processValueFactor(TreeNodePtr node) {
         case ARRAY_VALUE:
         case ARRAY_REFERENCE:
             if(value.type->size == 1) {
-                addCommand("      CONT");
+                addCommand("CONT");
             } else {
-                addCommand("      LDMV   %d", value.type->size);
+                addCommand("LDMV %d", value.type->size);
             }
             break;
         case REFERENCE:
-            addCommand("      LVLI   %d, %d", value.level, value.content.displacement);
+            addCommand("LVLI %d, %d", value.level, value.content.displacement);
             break;
         case VALUE:
-            addCommand("      LDVL   %d,%d", value.level, value.content.displacement);
+            addCommand("LDVL %d,%d", value.level, value.content.displacement);
             break;
         case CONSTANT: {
-            addCommand("      LDCT   %d", value.content.value);
+            addCommand("LDCT %d", value.content.value);
         }
             break;
     }
@@ -1168,7 +1168,7 @@ TypeDescriptorPtr processValueFactor(TreeNodePtr node) {
 
 TypeDescriptorPtr processIntegerFactor(TreeNodePtr node) {
     int integer = processInteger(node);
-    addCommand("      LDCT   %d", integer);
+    addCommand("LDCT %d", integer);
     return getSymbolTable()->integerTypeDescriptor;
 }
 
@@ -1205,22 +1205,22 @@ TypeDescriptorPtr processRelationalOperator(TreeNodePtr node) {
     TreeNodePtr operatorNode = node->subtrees[0];
     switch (operatorNode->category) {
         case LESS_OR_EQUAL_NODE:
-            addCommand("      LEQU");
+            addCommand("LEQU");
             break;
         case LESS_NODE:
-            addCommand("      LESS");
+            addCommand("LESS");
             break;
         case EQUAL_NODE:
-            addCommand("      EQUA");
+            addCommand("EQUA");
             break;
         case DIFFERENT_NODE:
-            addCommand("      DIFF");
+            addCommand("DIFF");
             break;
         case GREATER_OR_EQUAL_NODE:
-            addCommand("      GEQU");
+            addCommand("GEQU");
             break;
         case GREATER_NODE:
-            addCommand("      GRTR");
+            addCommand("GRTR");
             break;
         default:
             UnexpectedChildNodeCategoryError(RELATIONAL_OPERATOR_NODE, operatorNode->category);
@@ -1237,13 +1237,13 @@ TypeDescriptorPtr processAdditiveOperator(TreeNodePtr node) {
     TreeNodePtr operatorNode = node->subtrees[0];
     switch (operatorNode->category) {
         case PLUS_NODE:
-            addCommand("      ADDD");
+            addCommand("ADDD");
             return getSymbolTable()->integerTypeDescriptor;
         case MINUS_NODE:
-            addCommand("      SUBT");
+            addCommand("SUBT");
             return getSymbolTable()->integerTypeDescriptor;
         case OR_NODE:
-            addCommand("      LORR");
+            addCommand("LORR");
             return getSymbolTable()->booleanTypeDescriptor;
         default:
             UnexpectedChildNodeCategoryError(ADDITIVE_OPERATOR_NODE, operatorNode->category);
@@ -1261,10 +1261,10 @@ TypeDescriptorPtr processUnaryOperator(TreeNodePtr node) {
             // this operator has no practical effect
             return getSymbolTable()->integerTypeDescriptor;
         case MINUS_NODE:
-            addCommand("      NEGT");
+            addCommand("NEGT");
             return getSymbolTable()->integerTypeDescriptor;
         case NOT_NODE:
-            addCommand("      LNOT");
+            addCommand("LNOT");
             return getSymbolTable()->booleanTypeDescriptor;
         default:
             UnexpectedChildNodeCategoryError(UNARY_OPERATOR_NODE, operatorNode->category);
@@ -1279,13 +1279,13 @@ TypeDescriptorPtr processMultiplicativeOperator(TreeNodePtr node) {
     TreeNodePtr operatorNode = node->subtrees[0];
     switch(operatorNode->category) {
         case MULTIPLY_NODE:
-            addCommand("      MULT");
+            addCommand("MULT");
             return getSymbolTable()->integerTypeDescriptor;
         case DIV_NODE:
-            addCommand("      DIVI");
+            addCommand("DIVI");
             return getSymbolTable()->integerTypeDescriptor;
         case AND_NODE:
-            addCommand("      LAND");
+            addCommand("LAND");
             return getSymbolTable()->booleanTypeDescriptor;
         default:
             UnexpectedChildNodeCategoryError(MULTIPLICATIVE_OPERATOR_NODE, operatorNode->category);
@@ -1328,13 +1328,4 @@ void UnexpectedChildNodeCategoryError(NodeCategory fatherNodeCategory, NodeCateg
     sprintf(message, "For node category %s, got unexpected child node category %s",
             getCategoryName(fatherNodeCategory), getCategoryName(childNodeCategory));
     SemanticError(message);
-}
-
-/** Program String managament functions **/
-void addCommand(const char* commandFormat, ...) {
-    va_list args;
-    va_start(args, commandFormat);
-    vprintf(commandFormat, args);
-    printf("\n");
-    va_end(args);
 }

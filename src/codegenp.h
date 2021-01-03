@@ -6,7 +6,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdarg.h>
+
 
 void processMainFunction(TreeNodePtr node);
 void processFunction(TreeNodePtr node);
@@ -107,6 +107,3 @@ void UnexpectedSymbolEntryCategoryError(SymbolTableCategory expected, SymbolTabl
 void SymbolEntryCategoryError(char* expected, SymbolTableCategory gotten);
 void UnexpectedNodeCategoryError(NodeCategory expected, NodeCategory gotten);
 void UnexpectedChildNodeCategoryError(NodeCategory fatherNodeCategory, NodeCategory childNodeCategory);
-
-/** Generates the final commands **/
-void addCommand(const char* commandFormat, ...);
