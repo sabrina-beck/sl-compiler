@@ -166,36 +166,30 @@ typedef struct {
  * Symbol Table functions
  ****/
 
-SymbolTablePtr initializeSymbolTable();
+SymbolTablePtr getSymbolTable();
+int getFunctionLevel();
 
-SymbolTableEntryPtr findIdentifier(SymbolTablePtr symbolTable, char* identifier);
-FunctionDescriptorPtr findCurrentFunctionDescriptor(SymbolTablePtr symbolTable);
+SymbolTableEntryPtr findIdentifier(char* identifier);
+FunctionDescriptorPtr findCurrentFunctionDescriptor();
 
 TypeDescriptorPtr newFunctionType(FunctionHeaderPtr functionHeader);
 TypeDescriptorPtr newArrayType(int dimension, TypeDescriptorPtr elementType);
 
-SymbolTableEntryPtr addFunction(SymbolTablePtr symbolTable, FunctionHeaderPtr functionHeader);
-FunctionDescriptorPtr addMainFunction(SymbolTablePtr symbolTable);
-void addLabel(SymbolTablePtr symbolTable, char* identifier);
-void addType(SymbolTablePtr symbolTable, char* identifier, TypeDescriptorPtr typeDescriptor);
-void addVariable(SymbolTablePtr symbolTable, char* identifier, TypeDescriptorPtr typeDescriptor);
+SymbolTableEntryPtr addFunction(FunctionHeaderPtr functionHeader);
+FunctionDescriptorPtr addMainFunction();
+void addLabel(char* identifier);
+void addType(char* identifier, TypeDescriptorPtr typeDescriptor);
+void addVariable(char* identifier, TypeDescriptorPtr typeDescriptor);
 
-void endFunctionLevel(SymbolTablePtr symbolTablePtr);
+void endFunctionLevel();
 
 bool equivalentTypes(TypeDescriptorPtr type1, TypeDescriptorPtr type2);
 bool equivalentFunctions(TypeDescriptorPtr functionType, FunctionDescriptorPtr functionDescriptor);
 
-//...
-void addSymbolTableEntry(SymbolTablePtr symbolTable, SymbolTableEntryPtr entry);
-
-int getFunctionLevel();
-
-int nextMEPALabel();
-
 /****
  * Other functions
  ****/
-
+int nextMEPALabel();
 ParameterPtr concatenateParameters(ParameterPtr parameters1, ParameterPtr parameters2);
 Value valueFromEntry(SymbolTableEntryPtr entry);
 

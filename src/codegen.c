@@ -1,11 +1,5 @@
 #include "codegenp.h"
 
-
-/**
- * Symbol Table
- **/
-SymbolTablePtr getSymbolTable();
-
 /**
  * Implementations
  **/
@@ -29,7 +23,7 @@ void processMainFunction(TreeNodePtr node) {
     if(functionHeader->parameters != NULL) {
         SemanticError("Main function shouldn't have any parameters");
     }
-    FunctionDescriptorPtr functionDescriptor = addMainFunction(getSymbolTable());
+    FunctionDescriptorPtr functionDescriptor = addMainFunction();
 
     addCommand("      MAIN");
 
@@ -48,7 +42,7 @@ void processFunction(TreeNodePtr node) {
     }
 
     FunctionHeaderPtr functionHeader = processFunctionHeader(node->subtrees[0]);
-    SymbolTableEntryPtr entry = addFunction(getSymbolTable(), functionHeader);
+    SymbolTableEntryPtr entry = addFunction(functionHeader);
     FunctionDescriptorPtr functionDescriptor = entry->description.functionDescriptor;
 
     addCommand("L%d:   ENFN   %d         %s",
@@ -68,7 +62,7 @@ void processFunction(TreeNodePtr node) {
     }
     addCommand("      RTRN   %d        end function", functionDescriptor->parametersSize);
 
-    endFunctionLevel(getSymbolTable());
+    endFunctionLevel();
 }
 
 /** Function Header **/
@@ -190,7 +184,7 @@ void processBlock(TreeNodePtr node) {
 
     processVariables(node->subtrees[2]);
 
-    FunctionDescriptorPtr functionDescriptor = findCurrentFunctionDescriptor(getSymbolTable());
+    FunctionDescriptorPtr functionDescriptor = findCurrentFunctionDescriptor();
     if(functionDescriptor->variablesDisplacement > 0) {
         addCommand("      ALOC   %d", functionDescriptor->variablesDisplacement);
     }
@@ -225,7 +219,7 @@ void processLabels(TreeNodePtr node) {
     while(identifierNode != NULL) {
 
         char* identifier = processIdentifier(identifierNode);
-        addLabel(getSymbolTable(), identifier);
+        addLabel(identifier);
 
         identifierNode = identifierNode->next;
     }
@@ -256,7 +250,7 @@ void processTypeDeclaration(TreeNodePtr node) {
 
     char* identifier = processIdentifier(node->subtrees[0]);
     TypeDescriptorPtr type = processType(node->subtrees[1]);
-    addType(getSymbolTable(), identifier, type);
+    addType(identifier, type);
 }
 
 void processVariables(TreeNodePtr node) {
@@ -287,7 +281,7 @@ void processVariableDeclaration(TreeNodePtr node) {
     TreeNodePtr identifierNode = node->subtrees[0];
     while(identifierNode != NULL) {
         char* identifier = processIdentifier(identifierNode);
-        addVariable(getSymbolTable(), identifier, type);
+        addVariable(identifier, type);
         identifierNode = identifierNode->next;
     }
 }
@@ -339,7 +333,7 @@ Queue* processIdentifiersAsQueue(TreeNodePtr node) {
 TypeDescriptorPtr processIdentifierAsType(TreeNodePtr node) {
 
     char* identifier = processIdentifier(node);
-    SymbolTableEntryPtr entry = findIdentifier(getSymbolTable(), identifier);
+    SymbolTableEntryPtr entry = findIdentifier(identifier);
 
     if(entry->category != TYPE_SYMBOL) {
         UnexpectedSymbolEntryCategoryError(TYPE_SYMBOL, entry->category);
@@ -360,7 +354,7 @@ TypeDescriptorPtr processType(TreeNodePtr node) {
     }
 
     char* identifier = processIdentifier(node->subtrees[0]);
-    SymbolTableEntryPtr entry = findIdentifier(getSymbolTable(), identifier);
+    SymbolTableEntryPtr entry = findIdentifier(identifier);
 
     if(entry->category != TYPE_SYMBOL) {
         UnexpectedSymbolEntryCategoryError(TYPE_SYMBOL, entry->category);
@@ -434,7 +428,7 @@ void processLabel(TreeNodePtr node) {
     }
 
     char* identifier = processIdentifier(node->subtrees[0]);
-    SymbolTableEntryPtr symbolTableEntry = findIdentifier(getSymbolTable(), identifier);
+    SymbolTableEntryPtr symbolTableEntry = findIdentifier(identifier);
 
     if(symbolTableEntry == NULL) {
         UndeclaredLabelError(identifier);
@@ -453,7 +447,7 @@ void processLabel(TreeNodePtr node) {
 
     // since there are only statements at this level, the current activation record displacement on the stack
     // will always be equal to the size of its alocated variables
-    FunctionDescriptorPtr functionDescriptor = findCurrentFunctionDescriptor(getSymbolTable());
+    FunctionDescriptorPtr functionDescriptor = findCurrentFunctionDescriptor();
     addCommand("L%d:   ENLB   %d,%d        %s:",
                labelDescriptor->mepaLabel,
                symbolTableEntry->level,
@@ -529,7 +523,7 @@ Value processValue(TreeNodePtr node) {
     }
 
     char* identifier = processIdentifier(node->subtrees[0]);
-    SymbolTableEntryPtr entry = findIdentifier(getSymbolTable(), identifier);
+    SymbolTableEntryPtr entry = findIdentifier(identifier);
     if(entry == NULL) {
         SemanticError("Unknown identifier");
     }
@@ -606,7 +600,7 @@ TypeDescriptorPtr processFunctionCall(TreeNodePtr node) {
     }
 
     char* identifier = processIdentifier(node->subtrees[0]);
-    SymbolTableEntryPtr functionEntry = findIdentifier(getSymbolTable(), identifier);
+    SymbolTableEntryPtr functionEntry = findIdentifier(identifier);
 
     switch (functionEntry->category) {
         case PARAMETER_SYMBOL: {
@@ -798,7 +792,7 @@ void processArgumentByFunctionAsParameter(ParameterDescriptorPtr expectedParamet
 
     TreeNodePtr identifierNode = valueNode->subtrees[0];
     char* identifier = processIdentifier(identifierNode);
-    SymbolTableEntryPtr valueEntry = findIdentifier(getSymbolTable(), identifier);
+    SymbolTableEntryPtr valueEntry = findIdentifier(identifier);
 
     switch (valueEntry->category) {
         case FUNCTION_SYMBOL: {
@@ -902,7 +896,7 @@ void processGoto(TreeNodePtr node) {
 
     char* identifier = processIdentifier(node->subtrees[0]);
 
-    SymbolTableEntryPtr labelEntry = findIdentifier(getSymbolTable(), identifier);
+    SymbolTableEntryPtr labelEntry = findIdentifier(identifier);
     if(labelEntry->category != LABEL_SYMBOL) {
         UnexpectedSymbolEntryCategoryError(LABEL_SYMBOL, labelEntry->category);
     }
@@ -917,7 +911,7 @@ void processReturn(TreeNodePtr node) {
         UnexpectedNodeCategoryError(RETURN_NODE, node->category);
     }
 
-    FunctionDescriptorPtr functionDescriptor = findCurrentFunctionDescriptor(getSymbolTable());
+    FunctionDescriptorPtr functionDescriptor = findCurrentFunctionDescriptor();
     if(functionDescriptor == NULL) {
         SemanticError("Unexpected error, can't find current function descriptor");
     }
@@ -1108,8 +1102,6 @@ TypeDescriptorPtr processUnopExpression(TreeNodePtr node) {
 
         return operatorType;
     }
-
-
 
     TypeDescriptorPtr termType = processTerm(termNode);
     TypeDescriptorPtr operatorType = processUnaryOperator(unaryOperatorNode);
@@ -1371,15 +1363,4 @@ void addCommand(const char* commandFormat, ...) {
     vprintf(commandFormat, args);
     printf("\n");
     va_end(args);
-}
-
-/**
- * Symbol Table
- **/
-SymbolTablePtr symbolTable = NULL;
-SymbolTablePtr getSymbolTable() {
-    if(symbolTable == NULL) {
-        symbolTable = initializeSymbolTable();
-    }
-    return symbolTable;
 }
