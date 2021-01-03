@@ -1047,16 +1047,24 @@ TypeDescriptorPtr processBinaryOpExpression(TreeNodePtr node) {
     }
 
     TreeNodePtr termNode = node->subtrees[0];
-    TreeNodePtr additiveOperationNode = node->subtrees[1];
+    TreeNodePtr operatorNode = node->subtrees[1];
+    TreeNodePtr binaryOpExpressionNode = node->subtrees[2];
+
+    if(operatorNode == NULL) {
+        return processTerm(termNode);
+    }
 
     TypeDescriptorPtr termType = processTerm(termNode);
-    TypeDescriptorPtr additiveOpType = processAdditiveOperation(additiveOperationNode);
+    TypeDescriptorPtr binaryOpExpressionType = processBinaryOpExpression(binaryOpExpressionNode);
+    TypeDescriptorPtr operatorType = processAdditiveOperator(operatorNode);
 
-    if(!equivalentTypes(termType, additiveOpType)) {
+    if(!equivalentTypes(termType, operatorType) ||
+       !equivalentTypes(binaryOpExpressionType, operatorType)) {
         SemanticError("Expression's terms have incompatible types");
     }
 
-    return termType;
+    return operatorType;
+
 }
 
 TypeDescriptorPtr processUnopExpression(TreeNodePtr node) {
@@ -1066,93 +1074,61 @@ TypeDescriptorPtr processUnopExpression(TreeNodePtr node) {
 
     TreeNodePtr unaryOperatorNode = node->subtrees[0];
     TreeNodePtr termNode = node->subtrees[1];
-    TreeNodePtr additiveOperationNode = node->subtrees[2];
+    TreeNodePtr additiveOperatorNode = node->subtrees[2];
+    TreeNodePtr binaryOpExpression = node->subtrees[3];
+
+    if(additiveOperatorNode == NULL) {
+        TypeDescriptorPtr termType = processTerm(termNode);
+        TypeDescriptorPtr operatorType = processUnaryOperator(unaryOperatorNode);
+
+        if(!equivalentTypes(termType, operatorType)) {
+            SemanticError("Expression's term type incompatible with unary operator");
+        }
+
+        return operatorType;
+    }
+
+
 
     TypeDescriptorPtr termType = processTerm(termNode);
     TypeDescriptorPtr operatorType = processUnaryOperator(unaryOperatorNode);
-    TypeDescriptorPtr additiveOpType = processAdditiveOperation(additiveOperationNode);
 
-    if(!equivalentTypes(termType, operatorType)) {
+    TypeDescriptorPtr binaryOpExpressionType = processBinaryOpExpression(binaryOpExpression);
+
+    TypeDescriptorPtr additiveOperatorType = processAdditiveOperator(additiveOperatorNode);
+
+    if(!equivalentTypes(termType, operatorType) ||
+       !equivalentTypes(termType, additiveOperatorType) ||
+       !equivalentTypes(binaryOpExpressionType, additiveOperatorType)) {
         SemanticError("Expression's term type incompatible with unary operator");
     }
 
-    if(!equivalentTypes(termType, additiveOpType)) {
-        SemanticError("Expression's terms have incompatible types");
-    }
-
-    return operatorType;
-}
-
-TypeDescriptorPtr processAdditiveOperation(TreeNodePtr node) {
-    if(node == NULL) {
-        return NULL;
-    }
-
-    if(node->category != ADDITIVE_OPERATION_NODE) {
-        UnexpectedNodeCategoryError(ADDITIVE_OPERATION_NODE, node->category);
-    }
-
-    TreeNodePtr operatorNode = node->subtrees[0];
-    TreeNodePtr termNode = node->subtrees[1];
-    TreeNodePtr additiveOperationNode = node->subtrees[2];
-
-    TypeDescriptorPtr termType = processTerm(termNode);
-    TypeDescriptorPtr operatorType = processAdditiveOperator(operatorNode);
-    TypeDescriptorPtr additiveOpType = processAdditiveOperation(additiveOperationNode);
-
-    if(!equivalentTypes(termType, additiveOpType)) {
-        SemanticError("Expression's terms have incompatible types");
-    }
-
-    if(!equivalentTypes(termType, operatorType)) {
-        SemanticError("Expression's terms type incompatible with operator");
-    }
-
-    return operatorType;
+    return additiveOperatorType;
 }
 
 TypeDescriptorPtr processTerm(TreeNodePtr node) {
     if(node->category != TERM_NODE) {
         UnexpectedNodeCategoryError(TERM_NODE, node->category);
     }
+
     TreeNodePtr factorNode = node->subtrees[0];
-    TreeNodePtr multiplicativeOperationNode = node->subtrees[1];
+    TreeNodePtr multiplicativeOperatorNode = node->subtrees[1];
+    TreeNodePtr termNode = node->subtrees[2];
+
+    if(multiplicativeOperatorNode == NULL) {
+        return processFactor(factorNode);
+    }
 
     TypeDescriptorPtr factorType = processFactor(factorNode);
-    TypeDescriptorPtr multiplicativeOpType = processMultiplicativeOperation(multiplicativeOperationNode);
+    TypeDescriptorPtr termType = processTerm(termNode);
+    TypeDescriptorPtr multiplicativeOpType = processMultiplicativeOperator(multiplicativeOperatorNode);
 
-    if(!equivalentTypes(factorType, multiplicativeOpType)) {
+    if(!equivalentTypes(factorType, multiplicativeOpType) ||
+       !equivalentTypes(termType, multiplicativeOpType)) {
         SemanticError("Term's factors of incompatible types");
     }
 
     return factorType;
-}
-
-TypeDescriptorPtr processMultiplicativeOperation(TreeNodePtr node) {
-    if(node == NULL) {
-        return NULL;
-    }
-    if(node->category != MULTIPLICATIVE_OPERATION_NODE) {
-        UnexpectedNodeCategoryError(MULTIPLICATIVE_OPERATION_NODE, node->category);
-    }
-
-    TreeNodePtr operatorNode = node->subtrees[0];
-    TreeNodePtr factorNode = node->subtrees[1];
-    TreeNodePtr multiplicativeOperationNode = node->subtrees[2];
-
-    TypeDescriptorPtr factorType = processFactor(factorNode);
-    TypeDescriptorPtr operatorType = processMultiplicativeOperator(operatorNode);
-    TypeDescriptorPtr multiplicativeOpType = processMultiplicativeOperation(multiplicativeOperationNode);
-
-    if(!equivalentTypes(factorType, multiplicativeOpType)) {
-        SemanticError("Term's factors have incompatible types");
-    }
-
-    if(!equivalentTypes(factorType, operatorType)) {
-        SemanticError("Term's factors type incompatible with operator");
-    }
-
-    return operatorType;
 }
 
 TypeDescriptorPtr processFactor(TreeNodePtr node) {

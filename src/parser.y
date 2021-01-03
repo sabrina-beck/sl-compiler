@@ -219,18 +219,15 @@ expression                  : binaryop_expression { addTreeNode(EXPRESSION_NODE,
                             | unop_expression { addTreeNode(EXPRESSION_NODE, 1); }
                             | unop_expression relational_operator binaryop_expression { addTreeNode(EXPRESSION_NODE, 3); }
                             ;
-binaryop_expression         : term additive_operation { addTreeNode(BINARY_OPERATOR_EXPRESSION_NODE, 2); }
+binaryop_expression         : term { addTreeNode(BINARY_OPERATOR_EXPRESSION_NODE, 1); }
+                            | term additive_operator binaryop_expression { addTreeNode(BINARY_OPERATOR_EXPRESSION_NODE, 3); }
                             ;
-unop_expression             : unary_operator term additive_operation { addTreeNode(UNARY_OPERATOR_EXPRESSION_NODE, 3); }
-                            ;
-additive_operation          : { addEmpty(); }
-                            | additive_operator term additive_operation { addTreeNode(ADDITIVE_OPERATION_NODE, 3); }
+unop_expression             : unary_operator term { addTreeNode(UNARY_OPERATOR_EXPRESSION_NODE, 2); }
+                            | unary_operator term additive_operator binaryop_expression { addTreeNode(UNARY_OPERATOR_EXPRESSION_NODE, 4); }
                             ;
 
-term                        : factor multiplicative_operation { addTreeNode(TERM_NODE, 2); }
-                            ;
-multiplicative_operation    : { addEmpty(); }
-                            | multiplicative_operator factor multiplicative_operation { addTreeNode(MULTIPLICATIVE_OPERATION_NODE, 3); }
+term                        : factor { addTreeNode(TERM_NODE, 1); }
+                            | factor multiplicative_operator term { addTreeNode(TERM_NODE, 3); }
                             ;
 
 factor                      : value { addTreeNode(FACTOR_NODE, 1); }

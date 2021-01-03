@@ -255,12 +255,8 @@ const char *getCategoryName(NodeCategory category) {
             return "BINARY_OPERATOR_EXPRESSION_NODE";
         case UNARY_OPERATOR_EXPRESSION_NODE:
             return "UNARY_OPERATOR_EXPRESSION_NODE";
-        case ADDITIVE_OPERATION_NODE:
-            return "ADDITIVE_OPERATION_NODE";
         case TERM_NODE:
             return "TERM_NODE";
-        case MULTIPLICATIVE_OPERATION_NODE:
-            return "MULTIPLICATIVE_OPERATION_NODE";
         case FACTOR_NODE:
             return "FACTOR_NODE";
 
