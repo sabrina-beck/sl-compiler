@@ -178,10 +178,6 @@ void addType(char* identifier, TypeDescriptorPtr typeDescriptor) {
 
 void addVariable(char* identifier, TypeDescriptorPtr typeDescriptor) {
     FunctionDescriptorPtr functionDescriptor = findCurrentFunctionDescriptor();
-    if(functionDescriptor == NULL) {
-        fprintf(stderr, "addVariable: Expected current function descriptor\n");
-        exit(0);
-    }
 
     VariableDescriptorPtr variableDescriptor = malloc(sizeof(VariableDescriptor));
 

@@ -1,4 +1,127 @@
-#include "codegenp.h"
+#include "codegen.h"
+
+#include "tree.h"
+#include "symboltable.h"
+#include "utils.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+
+/***********************************************************************************************************************
+ * Code gen functions Declaration
+ **********************************************************************************************************************/
+
+void processMainFunction(TreeNodePtr node);
+void processFunction(TreeNodePtr node);
+
+/** Function Header **/
+FunctionHeaderPtr processFunctionHeader(TreeNodePtr node);
+
+TypeDescriptorPtr processFunctionReturnType(TreeNodePtr node);
+
+ParameterPtr processFormalParameter(TreeNodePtr node);
+ParameterPtr processParameterByReference(TreeNodePtr node);
+ParameterPtr processParameterByValue(TreeNodePtr node);
+ParameterPtr processParameter(TreeNodePtr node, ParameterPassage passage);
+ParameterPtr processFunctionParameter(TreeNodePtr node);
+
+/** Block **/
+void processBlock(TreeNodePtr node);
+
+void processLabels(TreeNodePtr node);
+
+void processTypes(TreeNodePtr node);
+void processTypeDeclaration(TreeNodePtr node);
+
+void processVariables(TreeNodePtr node);
+void processVariableDeclaration(TreeNodePtr node);
+
+void processFunctions(TreeNodePtr node);
+
+/* Identifier & Type */
+TypeDescriptorPtr processIdentifierAsType(TreeNodePtr node);
+char* processIdentifier(TreeNodePtr node);
+
+TypeDescriptorPtr processType(TreeNodePtr node);
+TypeDescriptorPtr processArraySizeDeclaration(TreeNodePtr node, TypeDescriptorPtr elementType);
+
+/** Body **/
+void processBody(TreeNodePtr node);
+
+void processStatement(TreeNodePtr node);
+
+void processLabel(TreeNodePtr node);
+
+void processUnlabeledStatement(TreeNodePtr node);
+
+void processAssignment(TreeNodePtr node);
+
+/*
+ * If it is an array, generates code to leave the address of it's indexed position on top of the stack will be generated
+ */
+Value processValue(TreeNodePtr node);
+void loadArrayBaseAddress(Value value);
+void processArrayIndexList(TreeNodePtr node, Value* variable);
+void processArrayIndex(TreeNodePtr node, Value* value);
+
+TypeDescriptorPtr processFunctionCall(TreeNodePtr node);
+TypeDescriptorPtr processFunctionParameterCall(TreeNodePtr node, SymbolTableEntryPtr functionEntry);
+TypeDescriptorPtr processRegularFunctionCall(TreeNodePtr node, SymbolTableEntryPtr functionEntry);
+TypeDescriptorPtr processPseudoFunctionCall(TreeNodePtr node, SymbolTableEntryPtr functionEntry);
+void processReadFunctionCall(TreeNodePtr argumentNode);
+void processWriteFunctionCall(TreeNodePtr argumentNode);
+
+void processArgumentsList(TreeNodePtr node, ParameterDescriptorsListPtr parameters);
+void processArgumentByValue(ParameterDescriptorPtr expectedParameter, TreeNodePtr node);
+void processArgumentByReference(ParameterDescriptorPtr expectedParameter, TreeNodePtr node);
+void processArgumentByFunctionAsParameter(ParameterDescriptorPtr expectedParameter, TreeNodePtr node);
+void processDeclaredFunctionAsArgument(ParameterDescriptorPtr expectedParameter, SymbolTableEntryPtr valueEntry);
+void processFunctionParameterAsArgument(ParameterDescriptorPtr expectedParameter, SymbolTableEntryPtr valueEntry);
+
+void processGoto(TreeNodePtr node);
+
+void processReturn(TreeNodePtr node);
+void processReturnWithValue(TreeNodePtr expressionNode, FunctionDescriptorPtr functionDescriptor);
+
+void processConditional(TreeNodePtr node);
+void processRepetitive(TreeNodePtr node);
+
+void processCompound(TreeNodePtr node);
+void processUnlabeledStatementList(TreeNodePtr node);
+
+TypeDescriptorPtr processExpression(TreeNodePtr node);
+TypeDescriptorPtr routeExpressionSubtree(TreeNodePtr node);
+TypeDescriptorPtr processBinaryOpExpression(TreeNodePtr node);
+TypeDescriptorPtr processUnopExpression(TreeNodePtr node);
+
+TypeDescriptorPtr processTerm(TreeNodePtr node);
+
+TypeDescriptorPtr processFactor(TreeNodePtr node);
+TypeDescriptorPtr processValueFactor(TreeNodePtr node);
+TypeDescriptorPtr processIntegerFactor(TreeNodePtr node);
+TypeDescriptorPtr processFunctionCallFactor(TreeNodePtr node);
+
+int processInteger(TreeNodePtr node);
+
+TypeDescriptorPtr processRelationalOperator(TreeNodePtr node);
+TypeDescriptorPtr processAdditiveOperator(TreeNodePtr node);
+TypeDescriptorPtr processUnaryOperator(TreeNodePtr node);
+TypeDescriptorPtr processMultiplicativeOperator(TreeNodePtr node);
+
+TreeNodePtr getValueExpression(TreeNodePtr node);
+
+
+/***********************************************************************************************************************
+ * Semantic error treatment declarations
+ **********************************************************************************************************************/
+
+void mainFunctionSemanticCheck(FunctionHeaderPtr functionHeader);
+void LabelAlreadyDefinedError(char* identifier);
+void UndeclaredLabelError(char* identifier);
+void UnexpectedSymbolEntryCategoryError01(SymbolTableCategory expected, SymbolTableCategory gotten);
+void UnexpectedSymbolEntryCategoryError02(char* expected, SymbolTableCategory gotten);
+void UnexpectedNodeCategoryError(NodeCategory expected, NodeCategory gotten);
+void UnexpectedChildNodeCategoryError(NodeCategory fatherNodeCategory, NodeCategory childNodeCategory);
 
 /***********************************************************************************************************************
  * Code gen functions Implementation
@@ -57,8 +180,6 @@ void processFunction(TreeNodePtr node) {
 
     endFunctionLevel();
 }
-
-/** Function Header **/
 
 FunctionHeaderPtr processFunctionHeader(TreeNodePtr node) {
     if(node->category != FUNCTION_HEADER_NODE) {
@@ -172,8 +293,6 @@ ParameterPtr processFunctionParameter(TreeNodePtr node) {
 
     return parameter;
 }
-
-/** Block **/
 
 void processBlock(TreeNodePtr node) {
     if(node->category != BLOCK_NODE) {
@@ -496,7 +615,7 @@ void processAssignment(TreeNodePtr node) {
 }
 
 /*
- * If it an array, code to leave the address of it's indexed position on top of the stack will be generated
+ * If it is an array, generates code to leave the address of it's indexed position on top of the stack will be generated
  */
 Value processValue(TreeNodePtr node) {
     if(node->category != VALUE_NODE) {
@@ -663,6 +782,7 @@ void processReadFunctionCall(TreeNodePtr argumentNode) {
 
     addCommand("READ");
 
+    // We can only read a value from stdin into a variable/parameter
     TreeNodePtr valueNode = getValueExpression(argumentNode);
     Value value = processValue(valueNode);
 
@@ -827,50 +947,6 @@ void processFunctionParameterAsArgument(ParameterDescriptorPtr expectedParameter
     addCommand("LDVL %s,%d", valueEntry->level, argumentDescriptor->displacement + 2);
 }
 
-/* If the expression is not a single factor, then it is a semantic error */
-TreeNodePtr getValueExpression(TreeNodePtr node) {
-    TreeNodePtr binaryOpExpressionNode = node->subtrees[0];
-    if(binaryOpExpressionNode->category != BINARY_OPERATOR_EXPRESSION_NODE) {
-        UnexpectedNodeCategoryError(BINARY_OPERATOR_EXPRESSION_NODE, binaryOpExpressionNode->category);
-    }
-
-    TreeNodePtr relationalOperatorNode = node->subtrees[1];
-    TreeNodePtr anotherBinaryIoExpression = node->subtrees[2];
-    if(relationalOperatorNode != NULL || anotherBinaryIoExpression != NULL) {
-        throwSemanticError("Expected expression to be single factor, but it is relational expression");
-    }
-
-    TreeNodePtr termNode = binaryOpExpressionNode->subtrees[0];
-    if(termNode->category != TERM_NODE) {
-        UnexpectedNodeCategoryError(TERM_NODE, termNode->category);
-    }
-    TreeNodePtr additiveOperationNode = binaryOpExpressionNode->subtrees[1];
-    if(additiveOperationNode != NULL) {
-        throwSemanticError("Expected expression to be single factor, but it is an additive operation");
-    }
-
-    TreeNodePtr factorNode = termNode->subtrees[0];
-    if(factorNode->category != FACTOR_NODE) {
-        UnexpectedNodeCategoryError(FACTOR_NODE, factorNode->category);
-    }
-    TreeNodePtr multiplicativeOperationNode = termNode->subtrees[1];
-    if(multiplicativeOperationNode != NULL) {
-        throwSemanticError("Expected expression to be single factor, but it is an multiplicative operation");
-    }
-
-    TreeNodePtr valueNode = factorNode->subtrees[0];
-
-    if(valueNode->category == EXPRESSION_NODE) {
-        valueNode = getValueExpression(valueNode);
-    }
-
-    if(valueNode->category != VALUE_NODE) {
-        UnexpectedNodeCategoryError(VALUE_NODE, valueNode->category);
-    }
-
-    return valueNode;
-}
-
 void processGoto(TreeNodePtr node) {
     if(node->category != GOTO_NODE) {
         UnexpectedNodeCategoryError(GOTO_NODE, node->category);
@@ -894,14 +970,11 @@ void processReturn(TreeNodePtr node) {
     }
 
     FunctionDescriptorPtr functionDescriptor = findCurrentFunctionDescriptor();
-    if(functionDescriptor == NULL) {
-        throwSemanticError("Unexpected error, can't find current function descriptor");
-    }
 
     TreeNodePtr expressionNode = node->subtrees[0];
-    if(expressionNode != NULL && functionDescriptor->returnType != NULL) {
+    if(expressionNode != NULL && functionDescriptor->returnType != NULL) { // return with value from a function with return type
         processReturnWithValue(expressionNode, functionDescriptor);
-    } else if (expressionNode == NULL && functionDescriptor->returnType == NULL) {
+    } else if (expressionNode == NULL && functionDescriptor->returnType == NULL) { // void return in void function
         addCommand("JUMP L%d", functionDescriptor->returnMepaLabel);
     } else if(functionDescriptor->returnType == NULL) {
         throwSemanticError("Can't return value for void function");
@@ -911,6 +984,8 @@ void processReturn(TreeNodePtr node) {
 }
 
 void processReturnWithValue(TreeNodePtr expressionNode, FunctionDescriptorPtr functionDescriptor) {
+    // if the return type is an array we must load the array address on top of the stack
+    // before loading the values to be stored on the return displacement
     if(functionDescriptor->returnType->size > 1) {
         addCommand("LADR %d,%d", getFunctionLevel(), functionDescriptor->returnDisplacement);
     }
@@ -920,9 +995,9 @@ void processReturnWithValue(TreeNodePtr expressionNode, FunctionDescriptorPtr fu
         throwSemanticError("Expression with type different than function return type");
     }
 
-    if(expressionType->size == 1) {
+    if(expressionType->size == 1) { // return single value
         addCommand("STVL %d,%d", getFunctionLevel(), functionDescriptor->returnDisplacement);
-    } else {
+    } else { // return array
         addCommand("STMV %d,%d", getFunctionLevel(), functionDescriptor->returnDisplacement);
     }
     addCommand("JUMP L%d", functionDescriptor->returnMepaLabel);
@@ -1300,7 +1375,54 @@ TypeDescriptorPtr processMultiplicativeOperator(TreeNodePtr node) {
     }
 }
 
-/** Semantic Errors handling functions **/
+/* If the expression is not a single factor, then it is a semantic error */
+TreeNodePtr getValueExpression(TreeNodePtr node) {
+    TreeNodePtr binaryOpExpressionNode = node->subtrees[0];
+    if(binaryOpExpressionNode->category != BINARY_OPERATOR_EXPRESSION_NODE) {
+        UnexpectedNodeCategoryError(BINARY_OPERATOR_EXPRESSION_NODE, binaryOpExpressionNode->category);
+    }
+
+    TreeNodePtr relationalOperatorNode = node->subtrees[1];
+    TreeNodePtr anotherBinaryIoExpression = node->subtrees[2];
+    if(relationalOperatorNode != NULL || anotherBinaryIoExpression != NULL) {
+        throwSemanticError("Expected expression to be single factor, but it is relational expression");
+    }
+
+    TreeNodePtr termNode = binaryOpExpressionNode->subtrees[0];
+    if(termNode->category != TERM_NODE) {
+        UnexpectedNodeCategoryError(TERM_NODE, termNode->category);
+    }
+    TreeNodePtr additiveOperationNode = binaryOpExpressionNode->subtrees[1];
+    if(additiveOperationNode != NULL) {
+        throwSemanticError("Expected expression to be single factor, but it is an additive operation");
+    }
+
+    TreeNodePtr factorNode = termNode->subtrees[0];
+    if(factorNode->category != FACTOR_NODE) {
+        UnexpectedNodeCategoryError(FACTOR_NODE, factorNode->category);
+    }
+    TreeNodePtr multiplicativeOperationNode = termNode->subtrees[1];
+    if(multiplicativeOperationNode != NULL) {
+        throwSemanticError("Expected expression to be single factor, but it is an multiplicative operation");
+    }
+
+    TreeNodePtr valueNode = factorNode->subtrees[0];
+
+    if(valueNode->category == EXPRESSION_NODE) {
+        valueNode = getValueExpression(valueNode);
+    }
+
+    if(valueNode->category != VALUE_NODE) {
+        UnexpectedNodeCategoryError(VALUE_NODE, valueNode->category);
+    }
+
+    return valueNode;
+}
+
+/***********************************************************************************************************************
+ * Semantic error treatment implementation
+ **********************************************************************************************************************/
+
 void mainFunctionSemanticCheck(FunctionHeaderPtr functionHeader) {
     if(functionHeader->returnType != NULL) {
         throwSemanticError("Main function should be void");
