@@ -480,6 +480,16 @@ Value valueFromEntry(SymbolTableEntryPtr entry) {
     }
 }
 
+void freeFunctionHeader(FunctionHeaderPtr functionHeader) {
+    ParameterPtr current = functionHeader->parameters;
+    while (current != NULL) {
+        ParameterPtr temp = current;
+        current = current->next;
+        free(temp);
+    }
+
+    free(functionHeader);
+}
 
 /* Private Implementations */
 

@@ -4,6 +4,8 @@
 #include "symboltable.h"
 #include "utils.h"
 
+#include <stdlib.h>
+
 /***********************************************************************************************************************
  * Code gen functions Declaration
  **********************************************************************************************************************/
@@ -139,6 +141,7 @@ void processMainFunction(TreeNodePtr node) {
     FunctionHeaderPtr functionHeader = processFunctionHeader(node->subtrees[0]);
     mainFunctionSemanticCheck(functionHeader);
     FunctionDescriptorPtr functionDescriptor = addMainFunction();
+    freeFunctionHeader(functionHeader);
 
     addCommand("MAIN");
 
@@ -159,6 +162,7 @@ void processFunction(TreeNodePtr node) {
 
     FunctionHeaderPtr functionHeader = processFunctionHeader(node->subtrees[0]);
     SymbolTableEntryPtr entry = addFunction(functionHeader);
+    freeFunctionHeader(functionHeader);
     FunctionDescriptorPtr functionDescriptor = entry->description.functionDescriptor;
 
     addCommand("L%d: ENFN %d  \t%s",
@@ -287,6 +291,8 @@ ParameterPtr processFunctionParameter(TreeNodePtr node) {
     parameter->passage = FUNCTION_PARAMETER;
     parameter->type = newFunctionType(functionHeader);
     parameter->next = NULL;
+
+    freeFunctionHeader(functionHeader);
 
     return parameter;
 }

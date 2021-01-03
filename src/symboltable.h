@@ -220,6 +220,8 @@ bool equivalentTypes(TypeDescriptorPtr type1, TypeDescriptorPtr type2);
 ParameterPtr concatenateParameters(ParameterPtr parameters1, ParameterPtr parameters2);
 /* Creates a Value from a Symbol Table Entry */
 Value valueFromEntry(SymbolTableEntryPtr entry);
+/* Frees function header memory */
+void freeFunctionHeader(FunctionHeaderPtr functionHeader);
 
 /***********************************************************************************************************************
  * Debug facilities --> helpers to print errors
