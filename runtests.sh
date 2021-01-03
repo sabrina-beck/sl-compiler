@@ -23,12 +23,12 @@ for testFile in tests/sl/*; do
   ./build/main < $testFile > $resultProgram
   #./build/mepa/mepa.py --silent --limit 12000 --progfile $resultProgram < $inputFile > $resultFile
 
-  DIFF=$(diff $resultProgram $expectedResponsePath)
+  DIFF=$(diff -b $resultProgram $expectedResponsePath)
 #  DIFF=$(diff $resultFile $expectedResponsePath)
   if [ "$DIFF" != "" ]
   then
     echo -e " | ${RED}FAILED${NO_COLOR}"
-    diff -y --color $resultProgram $expectedResponsePath
+    diff -b -y --color $resultProgram $expectedResponsePath
     #diff --color $resultFile $expectedResponsePath
   else
     echo -e " | ${GREEN}SUCCESS${NO_COLOR}"

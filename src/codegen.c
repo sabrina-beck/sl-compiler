@@ -29,12 +29,15 @@ void processMainFunction(TreeNodePtr node) {
     if(functionHeader->parameters != NULL) {
         SemanticError("Main function shouldn't have any parameters");
     }
-    addMainFunction(getSymbolTable());
+    FunctionDescriptorPtr functionDescriptor = addMainFunction(getSymbolTable());
 
     addCommand("      MAIN");
 
     processBlock(node->subtrees[1]);
 
+    if(functionDescriptor->variablesDisplacement > 0) {
+        addCommand("      DLOC   %d", functionDescriptor->variablesDisplacement);
+    }
     addCommand("      STOP");
 }
 
@@ -46,15 +49,24 @@ void processFunction(TreeNodePtr node) {
 
     FunctionHeaderPtr functionHeader = processFunctionHeader(node->subtrees[0]);
     SymbolTableEntryPtr entry = addFunction(getSymbolTable(), functionHeader);
+    FunctionDescriptorPtr functionDescriptor = entry->description.functionDescriptor;
 
     addCommand("L%d:   ENFN   %d         %s",
-               entry->description.functionDescriptor->headerMepaLabel,
+               functionDescriptor->headerMepaLabel,
                entry->level,
                entry->identifier);
+
+    if(functionDescriptor->variablesDisplacement > 0) {
+        addCommand("      ALOC   %d", functionDescriptor->variablesDisplacement);
+    }
+
     processBlock(node->subtrees[1]);
 
-    addCommand("L%d:   NOOP             ", entry->description.functionDescriptor->returnMepaLabel);
-    addCommand("      RTRN   %d        end function", entry->description.functionDescriptor->parametersSize);
+    addCommand("L%d:   NOOP             ", functionDescriptor->returnMepaLabel);
+    if(functionDescriptor->variablesDisplacement > 0) {
+        addCommand("      DLOC   %d", functionDescriptor->variablesDisplacement);
+    }
+    addCommand("      RTRN   %d        end function", functionDescriptor->parametersSize);
 
     endFunctionLevel(getSymbolTable());
 }
@@ -179,7 +191,6 @@ void processBlock(TreeNodePtr node) {
     processVariables(node->subtrees[2]);
 
     FunctionDescriptorPtr functionDescriptor = findCurrentFunctionDescriptor(getSymbolTable());
-
     if(functionDescriptor->variablesDisplacement > 0) {
         addCommand("      ALOC   %d", functionDescriptor->variablesDisplacement);
     }
@@ -199,9 +210,6 @@ void processBlock(TreeNodePtr node) {
     }
     processBody(node->subtrees[4]);
 
-    if(functionDescriptor->variablesDisplacement > 0) {
-        addCommand("      DLOC   %d", functionDescriptor->variablesDisplacement);
-    }
 }
 
 void processLabels(TreeNodePtr node) {

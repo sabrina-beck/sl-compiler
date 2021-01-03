@@ -200,7 +200,7 @@ TypeDescriptorPtr newArrayType(int dimension, TypeDescriptorPtr elementType) {
 
 }
 
-void addMainFunction(SymbolTablePtr symbolTable) {
+FunctionDescriptorPtr addMainFunction(SymbolTablePtr symbolTable) {
 
     FunctionDescriptorPtr functionDescriptor = malloc(sizeof(FunctionDescriptor));
 
@@ -214,6 +214,8 @@ void addMainFunction(SymbolTablePtr symbolTable) {
     functionDescriptor->returnType = NULL; // VOID
 
     symbolTable->mainFunctionDescriptor = functionDescriptor;
+
+    return functionDescriptor;
 }
 
 void addParameter(SymbolTablePtr symbolTable, char* identifier, ParameterDescriptorPtr parameterDescriptor) {

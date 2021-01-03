@@ -175,7 +175,7 @@ TypeDescriptorPtr newFunctionType(FunctionHeaderPtr functionHeader);
 TypeDescriptorPtr newArrayType(int dimension, TypeDescriptorPtr elementType);
 
 SymbolTableEntryPtr addFunction(SymbolTablePtr symbolTable, FunctionHeaderPtr functionHeader);
-void addMainFunction(SymbolTablePtr symbolTable);
+FunctionDescriptorPtr addMainFunction(SymbolTablePtr symbolTable);
 void addLabel(SymbolTablePtr symbolTable, char* identifier);
 void addType(SymbolTablePtr symbolTable, char* identifier, TypeDescriptorPtr typeDescriptor);
 void addVariable(SymbolTablePtr symbolTable, char* identifier, TypeDescriptorPtr typeDescriptor);
