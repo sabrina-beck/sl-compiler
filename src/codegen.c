@@ -97,8 +97,6 @@ ParameterPtr processFormalParameter(TreeNodePtr node) {
         return NULL;
     }
 
-    ParameterPtr nextParameters = processFormalParameter(node->next); // process parameters in reversed order
-
     ParameterPtr parameters;
     switch (node->category) {
         case EXPRESSION_PARAMETER_BY_REFERENCE_NODE:
@@ -114,7 +112,9 @@ ParameterPtr processFormalParameter(TreeNodePtr node) {
             UnexpectedChildNodeCategoryError(FUNCTION_HEADER_NODE, node->category);
     }
 
-    return concatenateParameters(nextParameters, parameters); // again parameters in reversed order
+    ParameterPtr nextParameters = processFormalParameter(node->next);
+
+    return concatenateParameters(parameters, nextParameters);
 }
 
 ParameterPtr processParameterByReference(TreeNodePtr node) {
@@ -137,6 +137,8 @@ ParameterPtr processParameter(TreeNodePtr node, ParameterPassage passage) {
 
     TypeDescriptorPtr type = processIdentifierAsType(node->subtrees[1]);
 
+    ParameterPtr parameters = NULL;
+
     TreeNodePtr identifierNode = node->subtrees[0];
     ParameterPtr previousParameter = NULL;
     while (identifierNode != NULL) {
@@ -145,14 +147,24 @@ ParameterPtr processParameter(TreeNodePtr node, ParameterPassage passage) {
         parameter->name = processIdentifier(identifierNode);
         parameter->passage = passage;
         parameter->type = type;
-        parameter->next = previousParameter;
+        parameter->next = NULL;
 
-        // it will invert the parameters order in the final structure
+        // keeps the head of the list
+        if(parameters == NULL) {
+            parameters = parameter;
+        }
+
+        // it will keep the parameters order in the final structure
+        if(previousParameter != NULL) {
+            previousParameter->next = parameter;
+        }
         previousParameter = parameter;
+
+
         identifierNode = identifierNode->next;
     }
 
-    return previousParameter;
+    return parameters;
 }
 
 ParameterPtr processFunctionParameter(TreeNodePtr node) {

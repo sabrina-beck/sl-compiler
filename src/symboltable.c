@@ -20,7 +20,6 @@ void addSymbolTableEntry(SymbolTableEntryPtr entry);
 
 ParameterDescriptorsListPtr newParameterDescriptors(ParameterPtr parameter);
 ParameterDescriptorsListPtr addParameterEntries(ParameterPtr parameters);
-ParameterDescriptorsListPtr inverseParametersDescriptors(ParameterDescriptorsListPtr parameters);
 
 /* Implementation */
 
@@ -74,7 +73,7 @@ FunctionDescriptorPtr findCurrentFunctionDescriptor() {
 
 TypeDescriptorPtr newFunctionType(FunctionHeaderPtr functionHeader) {
     FunctionTypeDescriptorPtr functionTypeDescriptor = malloc(sizeof(FunctionTypeDescriptor));
-    functionTypeDescriptor->parameters = inverseParametersDescriptors(newParameterDescriptors(functionHeader->parameters));
+    functionTypeDescriptor->parameters = newParameterDescriptors(functionHeader->parameters);
     functionTypeDescriptor->returnType = functionHeader->returnType;
 
     TypeDescriptorPtr type = malloc(sizeof(TypeDescriptorPtr));
@@ -111,7 +110,7 @@ SymbolTableEntryPtr addFunction(FunctionHeaderPtr functionHeader) {
     functionDescriptor->variablesDisplacement = 0;
     functionDescriptor->parametersSize = totalParametersSize(functionHeader->parameters);
     functionDescriptor->returnType = functionHeader->returnType;
-    functionDescriptor->parameters = inverseParametersDescriptors(addParameterEntries(functionHeader->parameters));
+    functionDescriptor->parameters = addParameterEntries(functionHeader->parameters);
     functionDescriptor->functionType = newFunctionType(functionHeader);
 
     // updates return displacement only if the function has a return type
@@ -281,6 +280,8 @@ ParameterDescriptorsListPtr newParameterDescriptorsRec(ParameterPtr parameter, i
         return NULL;
     }
 
+    ParameterDescriptorsListPtr nextParameters = newParameterDescriptorsRec(parameter->next, displacement);
+
     if(parameter->passage == VARIABLE_PARAMETER) {
         // a parameter by reference has only it's address on the stack, therefore it occupies only one position
         *displacement -= 1;
@@ -291,8 +292,6 @@ ParameterDescriptorsListPtr newParameterDescriptorsRec(ParameterPtr parameter, i
 
     ParameterDescriptorsListPtr parameterDescriptor = malloc(sizeof(ParameterDescriptorsList));
     parameterDescriptor->descriptor = newParameterDescriptor(parameter, *displacement);
-
-    ParameterDescriptorsListPtr nextParameters = newParameterDescriptorsRec(parameter->next, displacement);
     parameterDescriptor->next = nextParameters;
 
     return parameterDescriptor;
@@ -319,34 +318,13 @@ ParameterDescriptorsListPtr addParameterEntries(ParameterPtr parameters) {
     ParameterDescriptorsListPtr currentDescriptor = parameterDescriptors;
     ParameterPtr currentParameter = parameters;
     while(currentDescriptor != NULL && currentParameter != NULL) {
-        addParameter(currentParameter->name, currentDescriptor->descriptor);
+        addParameter(currentParameter->name, currentDescriptor->descriptor);\
 
         currentDescriptor = currentDescriptor->next;
         currentParameter = currentParameter->next;
     }
 
     return parameterDescriptors;
-}
-
-ParameterDescriptorsListPtr inverseParametersDescriptors(ParameterDescriptorsListPtr parameters) {
-    ParameterDescriptorsListPtr current = parameters;
-    ParameterDescriptorsListPtr previous = NULL;
-    ParameterDescriptorsListPtr next = NULL;
-
-    while(current != NULL) {
-        next = current->next;
-
-        current->next = previous;
-
-        previous = current;
-        current = next;
-    }
-
-    if(previous != NULL) {
-        return previous;
-    }
-
-    return current;
 }
 
 /***********************************************************************************************************************
