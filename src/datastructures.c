@@ -7,38 +7,6 @@ LinkedNode* newLinkedNode(void* data, LinkedNode* next);
 void freeLinkedNode(LinkedNode* node);
 
 /**
- * Public definitions implementation for List
- **/
-List* newList() {
-    List* list = malloc(sizeof(List));
-    list->size=0;
-    list->front = NULL;
-    return list;
-}
-
-void add(List* list, void* data) {
-    LinkedNode* newNode = newLinkedNode(data, list->front);
-    list->front = newNode;
-    list->size++;
-}
-
-List* concat(List* list1, List* list2) {
-    if(list1 == NULL) {
-        List* list = newList();
-        list->front = list2->front;
-        list->size = list2->size;
-        return list;
-    }
-
-    LinkedNode* current = list1->front;
-    while (current->next != NULL) {
-        current = current->next;
-    }
-    current->next = list2->front;
-    list1->size = list1->size + list2->size;
-}
-
-/**
  * Public definitions implementation for Stack
  **/
 Stack* newStack() {
@@ -80,45 +48,6 @@ void* find(Stack* stack, void* secondParam, bool (*predicate)(void*, void*)) {
     }
 
     return NULL;
-}
-
-/**
- * Public definitions implementation for Queue
- **/
-
-Queue* newQueue() {
-    Queue* queue = malloc(sizeof(Queue));
-    queue->size = 0;
-    queue->front = NULL;
-    queue->rear = NULL;
-    return queue;
-}
-
-void enqueue(Queue* queue, void* data) {
-    LinkedNode* newNode = newLinkedNode(data, NULL);
-    queue->size++;
-
-    if(queue->rear == NULL) {
-        queue->front = newNode;
-        queue->rear = newNode;
-    } else {
-        queue->rear->next = newNode;
-        queue->rear = newNode;
-    }
-}
-
-void* dequeue(Queue* queue){
-    if(queue->front == NULL) {
-        return NULL;
-    }
-
-    LinkedNode* dequeuedNode = queue->front;
-    queue->size--;
-    queue->front = dequeuedNode->next;
-
-    void* dequeuedData = dequeuedNode->data;
-    freeLinkedNode(dequeuedNode);
-    return dequeuedData;
 }
 
 /**

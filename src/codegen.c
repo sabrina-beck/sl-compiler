@@ -304,32 +304,6 @@ void processFunctions(TreeNodePtr node) {
 
 /* Identifier & Type */
 
-Stack* processIdentifiersAsStack(TreeNodePtr node) {
-    Stack * identifiers = newStack();
-
-    TreeNodePtr current = node;
-    while (current != NULL) {
-        char* identifier = processIdentifier(current);
-        push(identifiers, identifier);
-        current = current->next;
-    }
-
-    return identifiers;
-}
-
-Queue* processIdentifiersAsQueue(TreeNodePtr node) {
-    Queue* identifiers = newQueue();
-
-    TreeNodePtr current = node;
-    while (current != NULL) {
-        char* identifier = processIdentifier(current);
-        enqueue(identifiers, identifier);
-        current = current->next;
-    }
-
-    return identifiers;
-}
-
 TypeDescriptorPtr processIdentifierAsType(TreeNodePtr node) {
 
     char* identifier = processIdentifier(node);

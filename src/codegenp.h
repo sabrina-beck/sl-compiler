@@ -36,8 +36,6 @@ void processVariableDeclaration(TreeNodePtr node);
 void processFunctions(TreeNodePtr node);
 
 /* Identifier & Type */
-Stack* processIdentifiersAsStack(TreeNodePtr node);
-Queue* processIdentifiersAsQueue(TreeNodePtr node);
 TypeDescriptorPtr processIdentifierAsType(TreeNodePtr node);
 char* processIdentifier(TreeNodePtr node);
 
@@ -110,5 +108,5 @@ void SymbolEntryCategoryError(char* expected, SymbolTableCategory gotten);
 void UnexpectedNodeCategoryError(NodeCategory expected, NodeCategory gotten);
 void UnexpectedChildNodeCategoryError(NodeCategory fatherNodeCategory, NodeCategory childNodeCategory);
 
-/** Queue with the final program **/
+/** Generates the final commands **/
 void addCommand(const char* commandFormat, ...);
