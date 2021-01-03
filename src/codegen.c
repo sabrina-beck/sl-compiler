@@ -524,44 +524,56 @@ Value processValue(TreeNodePtr node) {
     SymbolTableEntryPtr entry = findIdentifier(getSymbolTable(), identifier);
 
     Value value = valueFromEntry(entry);
+    switch(value.category) {
+        case CONSTANT:
+        case REFERENCE:
+        case VALUE: {
+            return value;
+        }
+        case ARRAY_VALUE:
+        case ARRAY_REFERENCE: {
+            loadArrayBaseAddress(value);
 
-    TreeNodePtr arrayIndexNode = node->subtrees[1];
-    if(arrayIndexNode != NULL) {
-        value = processArrayIndexList(arrayIndexNode, value);
+            TreeNodePtr arrayIndexNode = node->subtrees[1];
+            processArrayIndexList(arrayIndexNode, &value);
+
+            return value;
+        }
     }
-    return value;
-
 }
 
-// it modifies value.type
-Value processArrayIndexList(TreeNodePtr node, Value value) {
+void loadArrayBaseAddress(Value value) {
     switch (value.category) {
         case ARRAY_VALUE:
             addCommand("      LADR   %d,%d", value.level, value.content.displacement);
+            break;
         case ARRAY_REFERENCE:
             addCommand("      LDVL   %d,%d", value.level, value.content.displacement);
             break;
         default:
-            SemanticError("Trying to index non array value");
+            return;
+    }
+}
+
+// it modifies value.type
+void processArrayIndexList(TreeNodePtr node, Value* value) {
+    if(node == NULL) {
+        return;
     }
 
     TreeNodePtr currentIndexNode = node;
-    while (node != NULL) {
-
-        value = processArrayIndex(currentIndexNode, value);
-
+    while (currentIndexNode != NULL) {
+        processArrayIndex(currentIndexNode, value);
         currentIndexNode = currentIndexNode->next;
     }
-
-    return value;
 }
 
-Value processArrayIndex(TreeNodePtr node, Value value) {
+void processArrayIndex(TreeNodePtr node, Value* value) {
     if(node->category != ARRAY_INDEX_NODE) {
         UnexpectedNodeCategoryError(ARRAY_INDEX_NODE, node->category);
     }
 
-    if(value.type->category != ARRAY_TYPE) {
+    if(value->type->category != ARRAY_TYPE) {
         SemanticError("Expected array type to process array index");
     }
 
@@ -571,10 +583,10 @@ Value processArrayIndex(TreeNodePtr node, Value value) {
         SemanticError("Index should be an integer");
     }
 
-    addCommand("      INDX   %d", value.type->size);
+    TypeDescriptorPtr arrayElementType = value->type->description.arrayDescriptor->elementType;
+    addCommand("      INDX   %d", arrayElementType->size);
 
-    value.type = value.type->description.arrayDescriptor->elementType;
-    return value;
+    value->type = arrayElementType;
 }
 
 TypeDescriptorPtr processFunctionCall(TreeNodePtr node) {
@@ -1157,7 +1169,11 @@ TypeDescriptorPtr processValueFactor(TreeNodePtr node) {
     switch (value.category) {
         case ARRAY_VALUE:
         case ARRAY_REFERENCE:
-            addCommand("      LDMV   %d", value.type->size);
+            if(value.type->size == 1) {
+                addCommand("      CONT");
+            } else {
+                addCommand("      LDMV   %d", value.type->size);
+            }
             break;
         case REFERENCE:
             addCommand("      LVLI   %d, %d", value.level, value.content.displacement);

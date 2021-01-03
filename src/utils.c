@@ -186,6 +186,7 @@ TypeDescriptorPtr newArrayType(int dimension, TypeDescriptorPtr elementType) {
     TypeDescriptorPtr typeDescriptor = malloc(sizeof(TypeDescriptorPtr));
     typeDescriptor->category = ARRAY_TYPE;
     typeDescriptor->size = dimension * elementType->size;;
+    typeDescriptor->description.arrayDescriptor = arrayDescriptor;
 
     return typeDescriptor;
 
@@ -351,7 +352,6 @@ bool equivalentTypes(TypeDescriptorPtr type1, TypeDescriptorPtr type2) {
         return true;
     }
 
-
     switch (type1->category) {
         case PREDEFINED_TYPE:
             return type1->category == type2->category &&
@@ -454,7 +454,20 @@ Value variableSymbolToValue(SymbolTableEntryPtr entry) {
     value.type = entry->description.variableDescriptor->type;
     value.level = entry->level;
     value.content.displacement = entry->description.variableDescriptor->displacement;
-    value.category = VALUE;
+
+    switch(entry->description.variableDescriptor->type->category) {
+        case PREDEFINED_TYPE:
+            value.category = VALUE;
+            break;
+        case ARRAY_TYPE:
+            value.category = ARRAY_VALUE;
+            break;
+        default: {
+            fprintf(stderr, "Expected predefined type or array type to convert to Value\n");
+            exit(0);
+        }
+    }
+
     return value;
 }
 

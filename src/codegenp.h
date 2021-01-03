@@ -55,8 +55,9 @@ void processUnlabeledStatement(TreeNodePtr node);
 
 void processAssignment(TreeNodePtr node);
 Value processValue(TreeNodePtr node);
-Value processArrayIndexList(TreeNodePtr node, Value variable);
-Value processArrayIndex(TreeNodePtr node, Value value);
+void loadArrayBaseAddress(Value value);
+void processArrayIndexList(TreeNodePtr node, Value* variable);
+void processArrayIndex(TreeNodePtr node, Value* value);
 
 TypeDescriptorPtr processFunctionCall(TreeNodePtr node);
 
